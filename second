@@ -1,112 +1,99 @@
-# -----------------------------
-# BOOKINGS — COUNTS & PERCENTS
-# -----------------------------
+view: users {
+  sql_table_name: `dna-legal-central-data.case_mart_dev.users` ;;
+  drill_fields: [id]
 
-# All Time (distinct IDs where booked date is present)
-measure: count_appointments_booked_all_time {
-  group_label: "Data – Measures / Bookings – Counts & Percents"
-  label: "Appointments Booked (All Time)"
-  type: count_distinct
-  sql: ${id} ;;
-  filters: [appointment_booked_london_date: "-NULL"]
-  value_format_name: decimal_0
+  dimension: id {
+    primary_key: yes
+    type: string
+    description: "A unique identifier for a user"
+    sql: ${TABLE}.id ;;
+  }
+  dimension_group: created {
+    type: time
+    description: "The time when the record was created"
+    timeframes: [raw, time, date, week, month, quarter, year]
+    sql: ${TABLE}.created_at ;;
+  }
+  dimension: email {
+    type: string
+    sql: ${TABLE}.email ;;
+  }
+  dimension: first_name {
+    type: string
+    description: "The first name of the user"
+    sql: ${TABLE}.first_name ;;
+  }
+  dimension: last_name {
+    type: string
+    description: "The last name of the user"
+    sql: ${TABLE}.last_name ;;
+  }
+  dimension: full_name{
+    label: "Account Manager Full Name"
+    type: string
+    sql: ${TABLE}.full_name ;;
+  }
+  dimension: mobile_number {
+    type: string
+    description: "The mobile number associated with this user"
+    sql: ${TABLE}.mobile_number ;;
+  }
+  dimension: source {
+    type: string
+    description: "The source of the data (mim or sugar_crm)"
+    sql: ${TABLE}.source ;;
+  }
+  dimension_group: updated {
+    type: time
+    description: "The time when the record was last updated"
+    timeframes: [raw, time, date, week, month, quarter, year]
+    sql: ${TABLE}.updated_at ;;
+  }
+  measure: count {
+    type: count
+    drill_fields: [id, last_name, first_name]
+  }
 }
+#######################################################################
 
-measure: count_appointments_booked_this_year {
-  group_label: "Data – Measures / Bookings – Counts & Percents"
-  label: "Appointments Booked (This Year)"
-  type: count_distinct
-  sql: ${id} ;;
-  filters: [appointment_booked_london_date: "this year"]
-  value_format_name: decimal_0
-}
 
-measure: count_appointments_booked_last_year {
-  group_label: "Data – Measures / Bookings – Counts & Percents"
-  label: "Appointments Booked (Last Year)"
-  type: count_distinct
-  sql: ${id} ;;
-  filters: [appointment_booked_london_date: "last year"]
-  value_format_name: decimal_0
-}
 
-measure: count_appointments_booked_this_month {
-  group_label: "Data – Measures / Bookings – Counts & Percents"
-  label: "Appointments Booked (This Month)"
-  type: count_distinct
-  sql: ${id} ;;
-  filters: [appointment_booked_london_date: "this month"]
-  value_format_name: decimal_0
-}
+# Next Dash  - Operations
 
-measure: count_appointments_booked_last_month {
-  group_label: "Data – Measures / Bookings – Counts & Percents"
-  label: "Appointments Booked (Last Month)"
-  type: count_distinct
-  sql: ${id} ;;
-  filters: [appointment_booked_london_date: "last month"]
-  value_format_name: decimal_0
-}
+explore: operations_performance {
+  label: "Operations Performance"
+  description: "Explore focused on tracking case lifecycle and operational KPIs (e.g. booking, lab, reporting stages)."
+  view_name: cases_operations
 
-measure: count_appointments_booked_2_months_ago {
-  group_label: "Data – Measures / Bookings – Counts & Percents"
-  label: "Appointments Booked (2 Months Ago)"
-  type: count_distinct
-  sql: ${id} ;;
-  filters: [appointment_booked_london_date: "2 months ago"]
-  value_format_name: decimal_0
-}
+  join: appointments {
+    type: left_outer
+    sql_on: ${cases_operations.id} = ${appointments.case_id} ;;
+    relationship: one_to_many
+  }
 
-measure: count_appointments_booked_3_months_ago {
-  group_label: "Data – Measures / Bookings – Counts & Percents"
-  label: "Appointments Booked (3 Months Ago)"
-  type: count_distinct
-  sql: ${id} ;;
-  filters: [appointment_booked_london_date: "3 months ago"]
-  value_format_name: decimal_0
-}
+  #  Pre-join for later steps
+  join: tests {
+    type: left_outer
+    sql_on: ${cases_operations.id} = ${tests.parent_id} ;;
+    relationship: one_to_many
+  }
 
-# Percents
-measure: percent_appointments_month_vs_year {
-  group_label: "Data – Measures / Bookings – Counts & Percents"
-  label: "% Appointments Booked (This Month vs Year)"
-  type: number
-  value_format_name: percent_1
-  sql: SAFE_DIVIDE(
-         ${count_appointments_booked_this_month},
-         NULLIF(${count_appointments_booked_this_year}, 0)
-       ) ;;
-}
+  join: samples {
+    type: left_outer
+    sql_on: ${cases_operations.id} = ${samples.case_id} ;;
+    relationship: one_to_many
+  }
 
-measure: percent_appointments_month_vs_total {
-  group_label: "Data – Measures / Bookings – Counts & Percents"
-  label: "% Appointments Booked (This Month vs Total)"
-  type: number
-  value_format_name: percent_1
-  sql: SAFE_DIVIDE(
-         ${count_appointments_booked_this_month},
-         NULLIF(${count_appointments_booked_all_time}, 0)
-       ) ;;
-}
+  join: drug_alcohol_results {
+    type: left_outer
+    sql_on: ${tests.id} = ${drug_alcohol_results.test_id} ;;
+    relationship: one_to_many
+  }
 
-# 30 days vs this year (cleaner, still distinct)
-measure: percent_appointments_30_days_vs_year {
-  group_label: "Data – Measures / Bookings – Counts & Percents"
-  label: "% Appointments (Last 30 Days vs This Year)"
-  type: number
-  value_format_name: percent_1
-  sql: SAFE_DIVIDE(
-         COUNT(DISTINCT CASE
-           WHEN ${appointment_booked_london_date}
-                BETWEEN DATE_SUB(CURRENT_DATE("Europe/London"), INTERVAL 30 DAY)
-                AND     CURRENT_DATE("Europe/London")
-           THEN ${id} END),
-         NULLIF(
-           COUNT(DISTINCT CASE
-             WHEN EXTRACT(YEAR FROM ${appointment_booked_london_date})
-                     = EXTRACT(YEAR FROM CURRENT_DATE("Europe/London"))
-             THEN ${id} END),
-           0
-         )
-       ) ;;
-}
+  join: mim_samples {
+    type: left_outer
+    sql_on: ${cases_operations.id} = ${mim_samples.case_id} ;;
+    relationship: one_to_many
+  }
+
+  }
