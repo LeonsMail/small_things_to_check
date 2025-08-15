@@ -1,28 +1,167 @@
-# Next week flag (Mon–Sun, London)
-  dimension: happens_next_week_monday_sunday {
-    group_label: "London Time – Next Week (Happens)"
-    type: yesno
-    sql:
-    DATE(${appt_happen_ldn_raw}) BETWEEN
-      DATE_TRUNC(CURRENT_DATE("Europe/London"), WEEK(MONDAY)) + 7
-      AND
-      DATE_TRUNC(CURRENT_DATE("Europe/London"), WEEK(MONDAY)) + 13 ;;
+# -----------------------------
+# BOOKINGS — COUNTS & PERCENTS
+# -----------------------------
+
+# Canonical "All Time" (merged - my merge, to clean duplicates, or similar logics)
+  measure: count_appointments_booked_all_time {
+    group_label: "Data – Measures"
+    type: count_distinct
+    sql: ${id} ;;
+    filters: [appointment_booked_date: "-NULL"]
+    label: "Appointments Booked (All Time)"
+    value_format_name: decimal_0
   }
 
-
-
-dimension_group: cancel_time {
-    group_label: "Data – Dimensions-London_Time"
-    type: time
-    sql: TIMESTAMP(DATETIME(${TABLE}.updated_at, "Europe/London")) ;;
-    timeframes: [raw, date, day_of_week, day_of_week_index, hour_of_day, week, month]
+  measure: count_appointments_booked_this_year {
+    group_label: "Data – Measures"
+    type: count_distinct
+    sql: ${appointments.id} ;;
+    filters: [appointments.appointment_booked_date: "this year"]
+    label: "Appointments Booked (This Year)"
+    value_format_name: decimal_0
   }
 
+  measure: count_appointments_booked_last_year {
+    group_label: "Data – Measures"
+    type: count_distinct
+    sql: ${appointments.id} ;;
+    filters: [appointments.appointment_booked_date: "last year"]
+    label: "Appointments Booked (Last Year)"
+    value_format_name: decimal_0
+  }
 
-measure: pct_booked_30_days_vs_year_london {
-    group_label: "London Time – Summary"
-    label: "% Booked (Last 30 Days vs This Year – London)"
+# Keep ONE “this month” version (filter-based, distinct)
+  measure: count_appointments_booked_this_month {
+    group_label: "Data – Measures"
+    type: count_distinct
+    sql: ${appointments.id} ;;
+    filters: [appointments.appointment_booked_date: "this month"]
+    label: "Appointments Booked (This Month)"
+    value_format_name: decimal_0
+  }
+
+  measure: count_appointments_booked_last_month {
+    group_label: "Data – Measures"
+    type: count_distinct
+    sql: ${appointments.id} ;;
+    filters: [appointments.appointment_booked_date: "last month"]
+    label: "Appointments Booked (Last Month)"
+    value_format_name: decimal_0
+  }
+
+  measure: count_appointments_booked_2_months_ago {
+    group_label: "Data – Measures"
+    type: count_distinct
+    sql: ${appointments.id} ;;
+    filters: [appointments.appointment_booked_date: "2 months ago"]
+    label: "Appointments Booked (2 Months Ago)"
+    value_format_name: decimal_0
+  }
+
+  measure: count_appointments_booked_3_months_ago {
+    group_label: "Data – Measures"
+    type: count_distinct
+    sql: ${appointments.id} ;;
+    filters: [appointments.appointment_booked_date: "3 months ago"]
+    label: "Appointments Booked (3 Months Ago)"
+    value_format_name: decimal_0
+  }
+
+# Percents (updated to use the kept monthly measure)
+  measure: percent_appointments_month_vs_year {
+    group_label: "Data – Measures"
     type: number
+    label: "% Appointments Booked (This Month vs Year)"
     value_format_name: percent_1
-    sql: SAFE_DIVIDE(${appts_booked_last_30_days_london}, NULLIF(${appts_booked_this_year_london}, 0)) ;;
+    sql: SAFE_DIVIDE(
+        ${count_appointments_booked_this_month},
+        NULLIF(${count_appointments_booked_this_year}, 0)
+      ) ;;
   }
+
+  measure: percent_appointments_month_vs_total {
+    group_label: "Data – Measures"
+    type: number
+    label: "% Appointments Booked (This Month vs Total)"
+    value_format_name: percent_1
+    sql: SAFE_DIVIDE(
+        ${count_appointments_booked_this_month},
+        NULLIF(${count_appointments_booked_all_time}, 0)
+      ) ;;
+  }
+
+  measure: percent_appointments_30_days_vs_year {
+    group_label: "Data – Measures"
+    type: number
+    label: "% Appointments (Last 30 Days vs This Year)"
+    value_format_name: percent_1
+    sql: SAFE_DIVIDE(
+        COUNT(DISTINCT CASE
+          WHEN ${appointments.appointment_booked_date} >= DATE_SUB(CURRENT_DATE(), INTERVAL 30 DAY)
+           AND ${appointments.appointment_booked_date} <= CURRENT_DATE()
+          THEN ${appointments.id}
+        END),
+        COUNT(DISTINCT CASE
+          WHEN EXTRACT(YEAR FROM ${appointments.appointment_booked_date}) = EXTRACT(YEAR FROM CURRENT_DATE())
+          THEN ${appointments.id}
+        END)
+      ) ;;
+  }
+##################################################################################################################################################
+
+
+status to change and introduce the new logic for appointments booked si altele pe care le vom face 
+
+
+dimension: status_display {
+    type: string
+    sql: CASE WHEN ${TABLE}.status = 'Completed_by_Collector' THEN 'Completed (Collector)'
+              WHEN ${TABLE}.status = 'DonorFailedToAttend' THEN 'Donor Failed to Attend'
+              WHEN ${TABLE}.status = 'Completed_by_Partner' THEN 'Completed (Partner)'
+              WHEN ${TABLE}.status = 'Planned_Unable' THEN 'Planned (Unable to Complete)'
+              WHEN ${TABLE}.status = 'Cancelled_FEE_Due' THEN 'Cancelled (Fee Due)'
+              WHEN ${TABLE}.status = 'Held' THEN 'Held'
+              WHEN ${TABLE}.status = 'Cancelled_No_Fee' THEN 'Cancelled (No Fee)'
+              WHEN ${TABLE}.status = 'Not_Held' THEN 'Not Held'
+              WHEN ${TABLE}.status = 'Planned_Accepted' THEN 'Planned (Accepted)'
+              WHEN ${TABLE}.status = 'Planned_Quoted' THEN 'Planned (Quoted)'
+              WHEN ${TABLE}.status = 'Planned_Accepted_DNA' THEN 'Planned (Accepted DNA)'
+              WHEN ${TABLE}.status = 'Planned_Provisional' THEN 'Planned (Provisional)'
+              WHEN ${TABLE}.status = 'Planned' THEN 'Planned'
+              WHEN ${TABLE}.status = 'quote_appointment_request_future' THEN 'Quote Apppointment Request Future'
+              WHEN ${TABLE}.status = 'quote_appointment_request' THEN 'Quote Appointment Request'
+              WHEN ${TABLE}.status = 'Completed' then 'Completed (MiM)'
+              WHEN ${TABLE}.status = 'participant_didnt_show' THEN 'Participant No Show (MiM)'
+              WHEN ${TABLE}.status = 'cancelled' THEN 'Cancelled (MiM)'
+              WHEN ${TABLE}.status = 'not_held' THEN 'Not Held (MiM)'
+              WHEN ${TABLE}.status = 'failed' THEN 'Failed (MiM)'
+              WHEN ${TABLE}.status = 'pending' THEN 'Pending (MiM)'
+              WHEN ${TABLE}.status = 'scheduled' THEN 'Scheduled (MiM)'
+              WHEN ${TABLE}.status = 'never_booked' THEN 'Never Booked (MiM)'
+              WHEN ${TABLE}.status = 'in_progress' THEN 'In Progress (MiM)'
+              WHEN ${TABLE}.status = 'on_my_way' THEN 'On My Way (MiM)'
+              WHEN ${TABLE}.status = 'partial_failure' THEN 'Partial Failure (MiM)'
+              WHEN ${TABLE}.status = 'participant_refused_collection' THEN 'Participant Refused Collection (MiM)'
+              ELSE 'not defined'
+              END;;
+  }
+
+Perfect but now we need to do the next iteration which is to go over by parts of the code developed, and check the links between the old Sugar dataset and the new MiM that will go live soon;
+So let us start with the first part the "Booking - Counts & Percents"
+Also for this I want to change the group_label: from "Data - Measures" to "Data - Measures" but make a subfolder inside "Data - Measures /  Bookings - Counts & Percents"
+Also I brought inside our case_mart inside appoinments the fild from MiM that should count the appointments booked; the filed is named "scheduled_start_time".
+Should I bring it inside the logic for appointments booked, please analyse the image I uploaded to you and give me your oppinion.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
