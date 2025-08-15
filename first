@@ -1,0 +1,10 @@
+# Next week flag (Mon–Sun, London)
+  dimension: happens_next_week_monday_sunday {
+    group_label: "London Time – Next Week (Happens)"
+    type: yesno
+    sql:
+    DATE(${appt_happen_ldn_raw}) BETWEEN
+      DATE_TRUNC(CURRENT_DATE("Europe/London"), WEEK(MONDAY)) + 7
+      AND
+      DATE_TRUNC(CURRENT_DATE("Europe/London"), WEEK(MONDAY)) + 13 ;;
+  }
