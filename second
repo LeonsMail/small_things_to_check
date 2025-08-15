@@ -1,410 +1,45 @@
-view: cases {
-  sql_table_name: `dna-legal-central-data.case_mart.cases` ;;
-  drill_fields: [id]
+# Next Dash  - Operations
 
-  dimension: id {
-    primary_key: yes
-    type: string
-    description: "A unique identifier for the case within the CRM system"
-    sql: ${TABLE}.id ;;
-  }
-  dimension: account_id {
-    type: string
-    description: "A unique identifier for the account associated with the case"
-    sql: ${TABLE}.account_id ;;
-  }
-  dimension: case_number {
-    type: string
-    description: "The internal reference number for the case"
-    sql: ${TABLE}.case_number ;;
-  }
-  dimension: case_worker_id {
-    type: string
-    description: "The identifier for the case worker or legal professional assigned to the case"
-    sql: ${TABLE}.case_worker_id ;;
-  }
-  dimension: client_ref {
-    type: string
-    description: "(If applicable) The name of the client related to the case"
-    sql: ${TABLE}.client_ref ;;
-  }
-  dimension_group: court {
-    type: time
-    description: "(If applicable) The date and time of any scheduled court hearings or appearances"
-    timeframes: [raw, time, date, week, month, quarter, year]
-    sql: ${TABLE}.court_date ;;
+explore: operations_performance {
+  label: "Operations Performance"
+  description: "Explore focused on tracking case lifecycle and operational KPIs (e.g. booking, lab, reporting stages)."
+  view_name: cases_operations
+
+  join: appointments {
+    type: left_outer
+    sql_on: ${cases_operations.id} = ${appointments.case_id} ;;
+    relationship: one_to_many
   }
 
-  dimension: date_is_null {
-    type: yesno
-    sql: ${TABLE}.court_date IS NULL ;;
-    description: "Returns 'Yes' if filing date is null. Used for custom sorting."
+  #  Pre-join for later steps
+  join: tests {
+    type: left_outer
+    sql_on: ${cases_operations.id} = ${tests.parent_id} ;;
+    relationship: one_to_many
   }
 
-  dimension: court_ref {
-    type: string
-    description: "(If applicable) A reference number assigned by the court for the case"
-    sql: ${TABLE}.court_ref ;;
-  }
-  dimension_group: created {
-    type: time
-    description: "The time when the record was created"
-    timeframes: [raw, time, date, week, month, quarter, year]
-    sql: ${TABLE}.created_at ;;
-  }
-  dimension_group: deadline {
-    type: time
-    description: "(If applicable) The deadline or due date for completing the case or specific tasks"
-    timeframes: [raw, time, date, week, month, quarter, year]
-    sql: ${TABLE}.deadline_date ;;
-  }
-  dimension: priority {
-    type: string
-    description: "The priority level assigned to the case"
-    sql: ${TABLE}.priority ;;
-  }
-  dimension: sales_person_id {
-    type: string
-    description: "The identifier for the sales person associated with the case"
-    sql: ${TABLE}.sales_person_id ;;
-  }
-  dimension_group: sample_by {
-    type: time
-    description: "(If applicable) The date by which samples need to be collected or provided"
-    timeframes: [raw, time, date, week, month, quarter, year]
-    sql: ${TABLE}.sample_by_date ;;
-  }
-  dimension: source {
-    type: string
-    description: "The source of the data (mim or sugar_crm)"
-    sql: ${TABLE}.source ;;
-  }
-  dimension_group: start {
-    type: time
-    description: "The date and time the case was officially started or opened"
-    timeframes: [raw, time, date, week, month, quarter, year]
-    sql: ${TABLE}.start_date ;;
+  join: samples {
+    type: left_outer
+    sql_on: ${cases_operations.id} = ${samples.case_id} ;;
+    relationship: one_to_many
   }
 
-  dimension: hair_colour {
-    label: "Raw Hair Colour"
-    type: string
-    sql: ${TABLE}.hair_colour ;;
+  join: drug_alcohol_results {
+    type: left_outer
+    sql_on: ${tests.id} = ${drug_alcohol_results.test_id} ;;
+    relationship: one_to_many
   }
 
-  dimension: status {
-    type: string
-    description: "The current status of the case"
-      sql: CASE WHEN ${TABLE}.status = '0f' THEN 'Booking Appointments'
-              WHEN ${TABLE}.status = '0i' THEN 'Awaiting Setup'
-              WHEN ${TABLE}.status = '1' THEN 'Appointment Booked'
-              WHEN ${TABLE}.status = '1a' THEN 'Awaiting Samples'
-              WHEN ${TABLE}.status = '2' THEN 'Testing Underway'
-              WHEN ${TABLE}.status = '3' THEN 'Testing Completed'
-              WHEN ${TABLE}.status = '30' THEN 'On Hold'
-              WHEN ${TABLE}.status = '31' THEN 'Future Case'
-              WHEN ${TABLE}.status = '40' THEN 'Training/Duplicate'
-              WHEN ${TABLE}.status = '5' THEN 'Case Completed'
-              WHEN ${TABLE}.status = '63' THEN 'Not Proceeding'
-              WHEN ${TABLE}.status = '64' THEN 'Case Contact Closure'
-              ELSE ${TABLE}.status END ;;
-  }
-  dimension: subject {
-    type: string
-    description: "A brief description or summary of the case's subject matter"
-    sql: ${TABLE}.subject ;;
-  }
-  dimension: testing_type {
-    type: string
-    description: "The type of testing or legal service involved in the case"
-    sql: ${TABLE}.testing_type ;;
-  }
-  dimension: hair_treatment_details {
-    type: string
-    sql: ${TABLE}.hair_treatment_details ;;
+  join: mim_samples {
+    type: left_outer
+    sql_on: ${cases_operations.id} = ${mim_samples.case_id} ;;
+    relationship: one_to_many
   }
 
-  dimension_group: updated {
-    type: time
-    description: "The time when the record was last updated"
-    timeframes: [raw, time, date, week, month, quarter, year]
-    sql: ${TABLE}.updated_at ;;
+  join: users {
+    view_label: "User"
+    type: left_outer
+    relationship: many_to_one
+    sql_on: ${cases_operations.sales_person_id} = ${users.id} ;;
   }
-  dimension_group: completed {
-    type: time
-    description: "The time when the case was completed."
-    timeframes: [raw, time, date, week, month, quarter, year]
-    sql: ${TABLE}.completed_at ;;
   }
-  measure: count {
-    type: count
-    drill_fields: [id]
-  }
-  ## Hair Corelation ##
-  dimension: parsed_hair_treatment_category {
-    label: "Hair Treatment Category (Parsed)"
-    type: string
-    sql:
-    CASE
-      WHEN LOWER(${hair_treatment_details}) LIKE '%bleach%'
-        OR LOWER(${hair_treatment_details}) LIKE '%dye%'
-        OR LOWER(${hair_treatment_details}) LIKE '%highlight%'
-        OR LOWER(${hair_treatment_details}) LIKE '%peroxide%'
-        THEN 'Dyed or Bleached'
-
-      WHEN LOWER(${hair_treatment_details}) LIKE '%gel%'
-      OR LOWER(${hair_treatment_details}) LIKE '%wax%'
-      OR LOWER(${hair_treatment_details}) LIKE '%spray%'
-      OR LOWER(${hair_treatment_details}) LIKE '%clay%'
-      THEN 'Styling Product'
-
-      WHEN LOWER(${hair_treatment_details}) LIKE '%head & shoulders%'
-      OR LOWER(${hair_treatment_details}) LIKE '%garnier%'
-      OR LOWER(${hair_treatment_details}) LIKE '%neutrogena%'
-      OR LOWER(${hair_treatment_details}) LIKE '%pantene%'
-      THEN 'Shampoo Only'
-
-      WHEN LOWER(${hair_treatment_details}) LIKE '%psoriasis%'
-      OR LOWER(${hair_treatment_details}) LIKE '%dandruff%'
-      THEN 'Medical or Prescribed'
-
-      WHEN TRIM(${hair_treatment_details}) IN ('', ',', '^^') THEN 'Uninterpretable'
-
-      ELSE 'Other'
-      END ;;
-  }
-
-  dimension: hair_colour_grouped {
-    label: "Hair Colour"
-    type: string
-    sql:
-    CASE
-      WHEN LOWER(${hair_colour}) = 'blackhair' THEN 'Black'
-      WHEN LOWER(${hair_colour}) = 'blondhair' THEN 'Blonde'
-      WHEN LOWER(${hair_colour}) = 'brownhair' THEN 'Brown'
-      WHEN LOWER(${hair_colour}) = 'redhair' THEN 'Red'
-      WHEN LOWER(${hair_colour}) = 'grayandwhitehair' THEN 'Grey/White'
-      WHEN LOWER(${hair_colour}) = 'chestnuthair' THEN 'Chestnut'
-      WHEN LOWER(${hair_colour}) = 'auburnhair' THEN 'Auburn'
-      ELSE 'Other'
-    END ;;
-  }
-
-
-  dimension: has_hair_colour_info {
-    label: "Has Hair Colour Info"
-    type: yesno
-    sql: ${TABLE}.has_hair_colour_info ;;
-  }
-
-
-
-  dimension: has_hair_treatment_info {
-    label: "Has Hair Treatment Info"
-    type: yesno
-    sql: ${TABLE}.has_hair_treatment_info ;;
-  }
-
-  dimension: court_date_or_message {
-    label: "Court Date (or Message)"
-    type: string
-    sql: CASE
-          WHEN ${court_date} IS NULL THEN 'Court Date not needed for this case'
-          ELSE FORMAT_DATE('%Y-%m-%d', ${court_date})
-        END ;;
-  }
-
-
-
-  measure: percent_with_valid_hair_colour {
-    type: number
-    value_format_name: percent_1
-    label: "% with Hair Colour Info"
-    sql: SAFE_DIVIDE(
-          SUM(CASE WHEN ${has_hair_colour_info} THEN 1 ELSE 0 END),
-          COUNT(*)
-       ) ;;
-    group_label: "Hair Info Coverage"
-  }
-
-  measure: percent_with_valid_hair_treatment {
-    type: number
-    value_format_name: percent_1
-    label: "% with Hair Treatment Info"
-    sql: SAFE_DIVIDE(
-          SUM(CASE WHEN ${has_hair_treatment_info} THEN 1 ELSE 0 END),
-          COUNT(*)
-       ) ;;
-    group_label: "Hair Info Coverage"
-  }
-
-  measure: count_booking_appointments {
-    type: sum
-    label: "Booking Appointments"
-    value_format_name: decimal_0
-    sql: CASE WHEN ${status} = 'Booking Appointments' THEN 1 ELSE NULL END ;;
-  }
-
-  measure: count_appointment_booked {
-    type: sum
-    label: "Appointment Booked"
-    value_format_name: decimal_0
-    sql: CASE WHEN ${status} = 'Appointment Booked' THEN 1 ELSE NULL END ;;
-  }
-
-
-  measure: count_awaiting_samples {
-    type: sum
-    label: "Awaiting Samples"
-    value_format_name: decimal_0
-    sql: CASE WHEN ${status} = 'Awaiting Samples' THEN 1 ELSE NULL END ;;
-  }
-
-  measure: count_testing_underway {
-    type: sum
-    label: "Testing Underway"
-    value_format_name: decimal_0
-    sql: CASE WHEN ${status} = 'Testing Underway' THEN 1 ELSE 0 END ;;
-  }
-
-  measure: count_testing_completed {
-    type: sum
-    label: "Testing Completed"
-    value_format_name: decimal_0
-    sql: CASE when ${status} = 'Testing Completed' then 1 else 0 end ;;
-  }
-
-  measure: count_case_completed {
-    type:  sum
-    label: "Case Completed"
-    value_format_name: decimal_0
-    sql: case when ${status} = 'Case Completed' then 1 else 0 end;;
-  }
-
-  measure: count_case_completed_last_30_days {
-    type: sum
-    label: "Case Completed (Last 30 Days)"
-    value_format_name: decimal_0
-    sql: CASE
-          WHEN ${status} = 'Case Completed'
-          AND ${completed_raw} >= TIMESTAMP(DATE_SUB(CURRENT_DATE(), INTERVAL 30 DAY))
-          THEN 1
-          ELSE 0
-        END ;;
-  }
-
-  measure: count_on_hold {
-    type: sum
-    label: "On Hold"
-    value_format_name: decimal_0
-    sql: case when ${status} = 'On Hold' then 1 else 0 end;;
-  }
-
-  measure: count_not_proceeding {
-    type: sum
-    label: "Not Proceding"
-    value_format_name: decimal_0
-    sql: case when ${status} = 'Not Proceeding' then 1 else 0 end  ;;
-  }
-
-  measure: count_case_contact_closure {
-    type: sum
-    label: "Case Contact Closure"
-    value_format_name: decimal_0
-    sql: case when ${status} = 'Case Contact Closure' then 1 else 0 end ;;
-  }
-
-  measure: percent_case_completed_last_30_days_vs_year {
-    label: "% Case Completed (Last 30 Days vs This Year)"
-    type: number
-    value_format_name: percent_1
-
-    sql: SAFE_DIVIDE(
-          SUM(
-            CASE
-              WHEN ${status} = 'Case Completed'
-                AND EXTRACT(DATE FROM ${completed_raw}) BETWEEN DATE_SUB(CURRENT_DATE(), INTERVAL 30 DAY) AND CURRENT_DATE()
-              THEN 1
-              ELSE 0
-            END
-          ),
-          SUM(
-            CASE
-              WHEN ${status} = 'Case Completed'
-                AND EXTRACT(YEAR FROM ${completed_raw}) = EXTRACT(YEAR FROM CURRENT_DATE())
-              THEN 1
-              ELSE 0
-            END
-          )
-        ) ;;
-  }
-  measure: count_appointment_booked_last_30_days {
-    type: sum
-    label: "Appointments Booked (Last 30 Days)"
-    value_format_name: decimal_0
-    sql: CASE
-          WHEN ${status} = 'Appointment Booked'
-           AND ${created_raw} >= TIMESTAMP(DATE_SUB(CURRENT_DATE(), INTERVAL 30 DAY))
-          THEN 1 ELSE 0
-        END ;;
-  }
-
-  measure: percent_appointment_booked_30_day_vs_total {
-    type: number
-    label: "% Appointments Booked (30 Days vs Total)"
-    value_format_name: percent_1
-    sql: SAFE_DIVIDE(
-          ${count_appointment_booked_last_30_days},
-          ${count_appointment_booked}
-        ) ;;
-  }
-
-
-  measure: count_appointment_booked_this_year {
-    type: sum
-    label: "Appointments Booked (This Year)"
-    value_format_name: decimal_0
-    sql: CASE
-          WHEN ${status} = 'Appointment Booked'
-           AND EXTRACT(YEAR FROM ${created_raw}) = EXTRACT(YEAR FROM CURRENT_DATE())
-          THEN 1 ELSE 0
-        END ;;
-  }
-
-
-
-  measure: percent_appointment_booked_30_day_vs_year {
-    type: number
-    label: "% Appointments Booked (30 Days vs This Year)"
-    value_format_name: percent_1
-    sql: SAFE_DIVIDE(
-          ${count_appointment_booked_last_30_days},
-          ${count_appointment_booked_this_year}
-
-        ) ;;
-      drill_fields: [id, created_raw]
-  }
-
-  measure: count_appointment_booked_this_month {
-    type: sum
-    label: "Appointments Booked (This Month)"
-    value_format_name: decimal_0
-    sql: CASE
-          WHEN ${status} = 'Appointment Booked'
-           AND EXTRACT(YEAR FROM ${created_raw}) = EXTRACT(YEAR FROM CURRENT_DATE())
-           AND EXTRACT(MONTH FROM ${created_raw}) = EXTRACT(MONTH FROM CURRENT_DATE())
-          THEN 1 ELSE 0
-        END ;;
-  }
-
-  measure: percent_appointment_booked_month_vs_year {
-    type: number
-    label: "% Appointments Booked (This Month vs This Year)"
-    value_format_name: percent_1
-    sql: SAFE_DIVIDE(
-          ${count_appointment_booked_this_month},
-          ${count_appointment_booked_this_year}
-        ) ;;
-  }
-
-}
