@@ -1,137 +1,15 @@
-view: collectors {
-  sql_table_name: `dna-legal-central-data.case_mart.collectors` ;;
-  drill_fields: [id]
+dimension_group: appointment_booked {
+    type: time
+    timeframes: [raw, time, date, week, month, quarter, year, month_name, month_num]
+    sql: ${TABLE}.appointment_booked ;;
+  }
 
 
-  dimension: id {
-    primary_key: yes
-    type: string
-    sql: ${TABLE}.id ;;
-  }
-  dimension: active {
-    type: number
-    sql:${TABLE}.active;;
-  }
-  dimension: contract_type {
-    type: string
-    sql: ${TABLE}.contract_type ;;
-  }
-  dimension_group: created {
+
+dimension_group: appointment_booked_london {
+    group_label: "Data – Dimensions-London_Time"
     type: time
-    timeframes: [raw, time, date, week, month, quarter, year]
-    sql: ${TABLE}.created_at ;;
+    label: "Appointment Booked (London)"
+    timeframes: [raw, time, date, week, month, quarter, year, hour_of_day, day_of_week]
+    sql: DATETIME(${appointment_booked_raw}, "Europe/London") ;;
   }
-  dimension: first_name {
-    hidden: yes
-    type: string
-    sql: ${TABLE}.first_name ;;
-  }
-  dimension: last_name {
-    hidden: yes
-    type: string
-    sql: ${TABLE}.last_name ;;
-  }
-  dimension: full_name {
-    type: string
-    sql: CONCAT(${first_name}, " ", ${last_name}) ;;
-  }
-  dimension: working_info {
-    type: string
-    sql: ${TABLE}.working_info ;;
-  }
-  dimension: blood_collections {
-    type: string
-    sql: ${TABLE}.blood_collections ;;
-  }
-  dimension: training_state {
-    type: string
-    sql: ${TABLE}.training_state ;;
-  }
-  dimension: location_address_city {
-    hidden: yes
-    type: string
-    sql: ${TABLE}.location_address_city ;;
-  }
-  dimension: location_address_country {
-    hidden: yes
-    type: string
-    sql: ${TABLE}.location_address_country ;;
-  }
-  dimension: location_address_postcode {
-    hidden: yes
-    type: string
-    sql: ${TABLE}.location_address_postcode ;;
-  }
-  dimension: location_address_state {
-    hidden: yes
-    type: string
-    sql: ${TABLE}.location_address_state ;;
-  }
-  dimension: location_address_street {
-    hidden: yes
-    type: string
-    sql: ${TABLE}.location_address_street ;;
-  }
-  dimension: shipping_address_city {
-    hidden: yes
-    type: string
-    sql: ${TABLE}.shipping_address_city ;;
-  }
-  dimension: shipping_address_country {
-    hidden: yes
-    type: string
-    sql: ${TABLE}.shipping_address_country ;;
-  }
-  dimension: shipping_address_postcode {
-    hidden: yes
-    type: string
-    sql: ${TABLE}.shipping_address_postcode ;;
-  }
-  dimension: shipping_address_state {
-    hidden: yes
-    type: string
-    sql: ${TABLE}.shipping_address_state ;;
-  }
-  dimension: shipping_address_street {
-    hidden: yes
-    type: string
-    sql: ${TABLE}.shipping_address_street ;;
-  }
-  dimension: source {
-    type: string
-    sql: ${TABLE}.source ;;
-  }
-  dimension: type {
-    hidden: yes
-    description: "e.g Private_Nurse, Private_Doctor, Certified Collector"
-    type: string
-    sql: ${TABLE}.type ;;
-  }
-  dimension_group: updated {
-    hidden:  yes
-    type: time
-    timeframes: [raw, time, date, week, month, quarter, year]
-    sql: ${TABLE}.updated_at ;;
-  }
-  dimension: user_id {
-    hidden:  yes
-    type: string
-    sql: ${TABLE}.user_id ;;
-  }
-  dimension: appointment_fee {
-    type: number
-    sql: ${TABLE}.appointment_fee ;;
-  }
-  dimension: venipuncture_fee {
-    type: number
-    sql: ${TABLE}.venipuncture_fee ;;
-  }
-  dimension: cost_per_working_day {
-    type: number
-    sql: ${TABLE}.cost_per_working_day ;;
-  }
-  measure: count {
-    type: count
-    drill_fields: [id, first_name, last_name]
-  }
-}
