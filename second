@@ -1,15 +1,10 @@
-dimension_group: appointment_booked {
-    type: time
-    timeframes: [raw, time, date, week, month, quarter, year, month_name, month_num]
-    sql: ${TABLE}.appointment_booked ;;
-  }
-
-
-
 dimension_group: appointment_booked_london {
-    group_label: "Data – Dimensions-London_Time"
-    type: time
-    label: "Appointment Booked (London)"
-    timeframes: [raw, time, date, week, month, quarter, year, hour_of_day, day_of_week]
-    sql: DATETIME(${appointment_booked_raw}, "Europe/London") ;;
-  }
+  group_label: "Data – Dimensions-London_Time"
+  label: "Appointment Booked (London)"
+  type: time
+  timeframes: [raw, time, date, week, month, quarter, year, hour_of_day, day_of_week, day_of_week_index]
+  sql:
+    -- Convert the UTC raw timestamp to London wall time, then back to TIMESTAMP
+    TIMESTAMP(DATETIME(${appointment_booked_raw}, "Europe/London"))
+  ;;
+}
