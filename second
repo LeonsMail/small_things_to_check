@@ -1,0 +1,112 @@
+# -----------------------------
+# BOOKINGS — COUNTS & PERCENTS
+# -----------------------------
+
+# All Time (distinct IDs where booked date is present)
+measure: count_appointments_booked_all_time {
+  group_label: "Data – Measures / Bookings – Counts & Percents"
+  label: "Appointments Booked (All Time)"
+  type: count_distinct
+  sql: ${id} ;;
+  filters: [appointment_booked_london_date: "-NULL"]
+  value_format_name: decimal_0
+}
+
+measure: count_appointments_booked_this_year {
+  group_label: "Data – Measures / Bookings – Counts & Percents"
+  label: "Appointments Booked (This Year)"
+  type: count_distinct
+  sql: ${id} ;;
+  filters: [appointment_booked_london_date: "this year"]
+  value_format_name: decimal_0
+}
+
+measure: count_appointments_booked_last_year {
+  group_label: "Data – Measures / Bookings – Counts & Percents"
+  label: "Appointments Booked (Last Year)"
+  type: count_distinct
+  sql: ${id} ;;
+  filters: [appointment_booked_london_date: "last year"]
+  value_format_name: decimal_0
+}
+
+measure: count_appointments_booked_this_month {
+  group_label: "Data – Measures / Bookings – Counts & Percents"
+  label: "Appointments Booked (This Month)"
+  type: count_distinct
+  sql: ${id} ;;
+  filters: [appointment_booked_london_date: "this month"]
+  value_format_name: decimal_0
+}
+
+measure: count_appointments_booked_last_month {
+  group_label: "Data – Measures / Bookings – Counts & Percents"
+  label: "Appointments Booked (Last Month)"
+  type: count_distinct
+  sql: ${id} ;;
+  filters: [appointment_booked_london_date: "last month"]
+  value_format_name: decimal_0
+}
+
+measure: count_appointments_booked_2_months_ago {
+  group_label: "Data – Measures / Bookings – Counts & Percents"
+  label: "Appointments Booked (2 Months Ago)"
+  type: count_distinct
+  sql: ${id} ;;
+  filters: [appointment_booked_london_date: "2 months ago"]
+  value_format_name: decimal_0
+}
+
+measure: count_appointments_booked_3_months_ago {
+  group_label: "Data – Measures / Bookings – Counts & Percents"
+  label: "Appointments Booked (3 Months Ago)"
+  type: count_distinct
+  sql: ${id} ;;
+  filters: [appointment_booked_london_date: "3 months ago"]
+  value_format_name: decimal_0
+}
+
+# Percents
+measure: percent_appointments_month_vs_year {
+  group_label: "Data – Measures / Bookings – Counts & Percents"
+  label: "% Appointments Booked (This Month vs Year)"
+  type: number
+  value_format_name: percent_1
+  sql: SAFE_DIVIDE(
+         ${count_appointments_booked_this_month},
+         NULLIF(${count_appointments_booked_this_year}, 0)
+       ) ;;
+}
+
+measure: percent_appointments_month_vs_total {
+  group_label: "Data – Measures / Bookings – Counts & Percents"
+  label: "% Appointments Booked (This Month vs Total)"
+  type: number
+  value_format_name: percent_1
+  sql: SAFE_DIVIDE(
+         ${count_appointments_booked_this_month},
+         NULLIF(${count_appointments_booked_all_time}, 0)
+       ) ;;
+}
+
+# 30 days vs this year (cleaner, still distinct)
+measure: percent_appointments_30_days_vs_year {
+  group_label: "Data – Measures / Bookings – Counts & Percents"
+  label: "% Appointments (Last 30 Days vs This Year)"
+  type: number
+  value_format_name: percent_1
+  sql: SAFE_DIVIDE(
+         COUNT(DISTINCT CASE
+           WHEN ${appointment_booked_london_date}
+                BETWEEN DATE_SUB(CURRENT_DATE("Europe/London"), INTERVAL 30 DAY)
+                AND     CURRENT_DATE("Europe/London")
+           THEN ${id} END),
+         NULLIF(
+           COUNT(DISTINCT CASE
+             WHEN EXTRACT(YEAR FROM ${appointment_booked_london_date})
+                     = EXTRACT(YEAR FROM CURRENT_DATE("Europe/London"))
+             THEN ${id} END),
+           0
+         )
+       ) ;;
+}
