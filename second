@@ -1,5 +1,37 @@
-join: users {
-  type: left_outer
-  relationship: many_to_one   # many cases -> one user
-  sql_on: ${cases_operations.account_manager_id} = ${users.id} ;;
-}
+# Next Dash  - Operations
+
+explore: operations_performance {
+  label: "Operations Performance"
+  description: "Explore focused on tracking case lifecycle and operational KPIs (e.g. booking, lab, reporting stages)."
+  view_name: cases_operations
+
+  join: appointments {
+    type: left_outer
+    sql_on: ${cases_operations.id} = ${appointments.case_id} ;;
+    relationship: one_to_many
+  }
+
+  #  Pre-join for later steps
+  join: tests {
+    type: left_outer
+    sql_on: ${cases_operations.id} = ${tests.parent_id} ;;
+    relationship: one_to_many
+  }
+
+  join: samples {
+    type: left_outer
+    sql_on: ${cases_operations.id} = ${samples.case_id} ;;
+    relationship: one_to_many
+  }
+
+  join: drug_alcohol_results {
+    type: left_outer
+    sql_on: ${tests.id} = ${drug_alcohol_results.test_id} ;;
+    relationship: one_to_many
+  }
+
+  join: mim_samples {
+    type: left_outer
+    sql_on: ${cases_operations.id} = ${mim_samples.case_id} ;;
+    relationship: one_to_many
+  }
