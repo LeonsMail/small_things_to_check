@@ -1,6 +1,13 @@
-SELECT 
-  COUNT(*) AS appointments_booked_all_time
-FROM 
-  `dna-legal-central-data.case_mart.appointments`
-WHERE 
-  appointment_booked IS NOT NULL
+SELECT COUNT(DISTINCT appt.id) AS looker_like_count
+FROM `dna-legal-central-data.case_mart.cases` c
+LEFT JOIN `dna-legal-central-data.case_mart.appointments` appt
+  ON c.id = appt.case_id
+WHERE appt.appointment_booked IS NOT NULL;
+
+
+SELECT COUNT(*) AS booked_without_case
+FROM `dna-legal-central-data.case_mart.appointments` appt
+LEFT JOIN `dna-legal-central-data.case_mart.cases` c
+  ON c.id = appt.case_id
+WHERE appt.appointment_booked IS NOT NULL
+  AND c.id IS NULL;
