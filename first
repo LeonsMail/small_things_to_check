@@ -17,3 +17,12 @@ dimension_group: cancel_time {
     sql: TIMESTAMP(DATETIME(${TABLE}.updated_at, "Europe/London")) ;;
     timeframes: [raw, date, day_of_week, day_of_week_index, hour_of_day, week, month]
   }
+
+
+measure: pct_booked_30_days_vs_year_london {
+    group_label: "London Time – Summary"
+    label: "% Booked (Last 30 Days vs This Year – London)"
+    type: number
+    value_format_name: percent_1
+    sql: SAFE_DIVIDE(${appts_booked_last_30_days_london}, NULLIF(${appts_booked_this_year_london}, 0)) ;;
+  }
