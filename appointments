@@ -1,0 +1,1097 @@
+
+view: appointments {
+  sql_table_name: `dna-legal-central-data.case_mart.appointments` ;;
+  drill_fields: [id, failed_reason]
+
+  dimension: id {
+    primary_key: yes
+    type: string
+    sql: ${TABLE}.id ;;
+  }
+  dimension_group: actioned {
+    type: time
+    timeframes: [raw, time, date, week, month, quarter, year, month_name, month_num]
+    sql: ${TABLE}.actioned_date ;;
+  }
+  dimension: booked_by {
+    type: string
+    sql: ${TABLE}.booked_by ;;
+  }
+  dimension: address_city {
+    hidden: yes
+    type: string
+    sql: ${TABLE}.address_city ;;
+  }
+  dimension: address_country {
+    type: string
+    sql: ${TABLE}.address_country ;;
+  }
+  dimension: address_postcode {
+    type: string
+    sql: ${TABLE}.address_postcode ;;
+  }
+
+  dimension: postcode_regions {
+    type: string
+    sql: REGEXP_EXTRACT(${address_postcode}, r'^[A-Z]{1,2}')   ;;
+  }
+
+  dimension: address_postcode_region {
+    type: string
+    map_layer_name: uk_postcode_areas
+    sql: REGEXP_EXTRACT(${address_postcode}, r'^[A-Z]{1,2}')   ;;
+  }
+
+###This sales_regions dimension will need removing once uk_postcodes_regions view is joined to appointments explore
+  dimension: sales_regions {
+    type: string
+    sql: CASE WHEN ${address_postcode_region} IN ("CB","CM","CO","IP","NR","PE","SS") THEN "East Anglia & Essex"
+              WHEN ${address_postcode_region} IN ("AL","HP","LE","LU","MK","NG","NN","OX","SG") THEN "East Midlands"
+              WHEN ${address_postcode_region} IN ("BR","CR","DA","E","EC","EN","HA","IG","KT","N","NW","RM","SE","SM","SW","TW","UB","W","WC","WD") THEN "London"
+              WHEN ${address_postcode_region} IN ("DH","DL","NE","SR","TS") THEN "North East"
+              WHEN ${address_postcode_region} IN ("BB","BL","CA","CH","CW","FY","L","LA","M","OL","PR","SK","WA","WN") THEN "North West"
+              WHEN ${address_postcode_region} IN ("BN","CT","GU","ME","PO","RG","RH","SL","SO","TN") THEN "South East"
+              WHEN ${address_postcode_region} IN ("BA","BH","BS","DT","EX","GL","PL","SN","SP","TA","TQ","TR") THEN "South West"
+              WHEN ${address_postcode_region} IN ("CF","LD","LL","NP","SA","SY") THEN "Wales"
+              WHEN ${address_postcode_region} IN ("B","CV","DE","DY","HR","ST","TF","WR","WS","WV") THEN "West Midlands"
+              WHEN ${address_postcode_region} IN ("BD","DN","HD","HG","HU","HX","LN","LS","S","WF","YO") THEN "Yorkshire (inc Lincs and Humberside)"
+              ELSE "Unspecified" END;;
+  }
+
+  dimension: sales_regions_amended {
+    type: string
+    sql: CASE WHEN ${address_postcode_region} IN ("AL", "CB", "CM", "CO", "HP", "IP", "LU", "NR", "PE", "SG", "SS") THEN "East of England"
+            WHEN ${address_postcode_region} IN ("DE", "LE", "NG", "NN") THEN "East Midlands"
+            WHEN ${address_postcode_region} IN ("E", "EC", "N", "NW", "SE", "SW", "W", "WC", "BR", "CR", "DA", "EN", "HA", "IG", "KT", "RM", "SM", "TW", "UB", "WD") THEN "London"
+            WHEN ${address_postcode_region} IN ("BT") THEN "Northern Ireland"
+            WHEN ${address_postcode_region} IN ("DH", "DL", "NE", "SR", "TS") THEN "North East"
+            WHEN ${address_postcode_region} IN ("BB", "BL", "CA", "CH", "CW", "FY", "L", "LA", "M", "OL", "PR", "SK", "WA", "WN") THEN "North West"
+            WHEN ${address_postcode_region} IN ("AB", "DD", "DG", "EH", "FK", "G", "HS", "IV", "KA", "KW", "KY", "ML", "PA", "PH", "TD", "ZE") THEN "Scotland"
+            WHEN ${address_postcode_region} IN ("BN", "CT", "GU", "ME", "OX", "PO", "RG", "RH", "SL", "SO", "TN") THEN "South East"
+            WHEN ${address_postcode_region} IN ("BA", "BH", "BS", "DT", "EX", "GL", "PL", "SN", "SP", "TA", "TQ", "TR") THEN "South West"
+            WHEN ${address_postcode_region} IN ("CF", "LD", "LL", "NP", "SA", "SY") THEN "Wales"
+            WHEN ${address_postcode_region} IN ("B", "CV", "DY", "HR", "ST", "TF", "WR", "WS", "WV") THEN "West Midlands"
+            WHEN ${address_postcode_region} IN ("BD", "DN", "HD", "HG", "HU", "HX", "LN", "LS", "S", "WF", "YO") THEN "Yorkshire and The Humber"
+            ELSE "Unspecified" END;;
+    map_layer_name: uk_regions
+  }
+###This amended_regions dimension will need removing once uk_postcodes_regions view is joined to appointments explore
+  dimension: amended_regions {
+    type: string
+    sql: CASE WHEN ${address_postcode_region} IN ("GY","JE") THEN "Channel Islands"
+              WHEN ${address_postcode_region} IN ("CB","CM","CO","IP","NR","PE","SS") THEN "East Anglia & Essex"
+              WHEN ${address_postcode_region} IN ("AL","HP","LE","LU","NG","NN","SG","DE") THEN "East Midlands"
+              WHEN ${address_postcode_region} = "IM" THEN "Isle of Man"
+              WHEN ${address_postcode_region} IN ("LD","SY") THEN "Mid Wales"
+              WHEN ${address_postcode_region} IN ("DH","DL","NE","SR","TS") THEN "North East"
+              WHEN ${address_postcode_region} IN ("E","EN","IG","RM") THEN "North East London"
+              WHEN ${address_postcode_region} = "LL" THEN "North Wales"
+              WHEN ${address_postcode_region} IN ("BB","BL","CA","CW","FY","L","LA","M","OL","PR","SK","WA","WN") THEN "North West"
+              WHEN ${address_postcode_region} IN ("HA","N","TW","UB","W","WD","NW") THEN "North West London"
+              WHEN ${address_postcode_region} = "BT" THEN "Northern Ireland"
+              WHEN ${address_postcode_region} IN ("AB","DD","DG","EH","FK","G","HS","IV","KA","KW","KY","ML","PA","PH","TD","ZE") THEN "Scotland"
+              WHEN ${address_postcode_region} IN ("MK","OX","BN","CT","GU","ME","PO","RG","RH","SL","SO","TN") THEN "South East"
+              WHEN ${address_postcode_region} IN ("BR","CR","DA","EC","SE") THEN "South East London"
+              WHEN ${address_postcode_region} IN ("CF","NP") THEN "South Wales"
+              WHEN ${address_postcode_region} IN ("BA","BH","BS","DT","EX","GL","PL","SN","SP","TA","TQ","TR") THEN "South West"
+              WHEN ${address_postcode_region} IN ("KT","SM","SW","WC") THEN "South West London"
+              WHEN ${address_postcode_region} = "CH" THEN "Sub split"
+              WHEN ${address_postcode_region} IN ("B","CV","DY","HR","ST","TF","WR","WS","WV") THEN "West Midlands"
+              WHEN ${address_postcode_region} = "SA" THEN "Wales"
+              WHEN ${address_postcode_region} IN ("BD","DN","HD","HG","HU","HX","LN","LS","S","WF","YO") THEN "Yorkshire"
+              ELSE "Other" END;;
+    map_layer_name: uk_regions
+  }
+  dimension: address_state {
+    hidden: yes
+    type: string
+    sql: ${TABLE}.address_state ;;
+  }
+  dimension: address_street {
+    hidden: yes
+    type: string
+    sql: ${TABLE}.address_street ;;
+  }
+
+  dimension_group: initial_contact_attempt{
+    type: time
+    timeframes: [raw, time, date, week, month, quarter, year, month_name, month_num]
+    sql: ${TABLE}.initial_contact_attempt ;;
+  }
+  dimension_group: inital_contact_to_appointment_booked_duration{
+    type: duration
+    intervals: [day,hour]
+    sql_start: ${initial_contact_attempt_raw} ;;
+    sql_end: ${appointment_booked _raw} ;;
+    description: "The time elapsed between when the inital contact attempt was made and the appointment being booked."
+  }
+
+  dimension_group: appointment_booked {
+    type: time
+    timeframes: [raw, time, date, week, month, quarter, year, month_name, month_num]
+    sql: ${TABLE}.appointment_booked ;;
+  }
+
+  dimension_group: assigned {
+    type: time
+    timeframes: [raw, time, date, week, month, quarter, year, month_name, month_num]
+    sql: ${TABLE}.assigned_date ;;
+  }
+  dimension: case_id {
+    hidden: yes
+    type: string
+    sql: ${TABLE}.case_id ;;
+  }
+  dimension: clinic_id {
+    hidden: yes
+    type: string
+    sql: ${TABLE}.clinic_id ;;
+  }
+  dimension: collector_id {
+    hidden: yes
+    type: string
+    sql: ${TABLE}.collector_id ;;
+  }
+  dimension_group: created {
+    description: "The date in which the appointment was created."
+    type: time
+    timeframes: [raw, time, date, week, month, quarter, year, month_name, month_num]
+    sql: ${TABLE}.created_at ;;
+  }
+  dimension: source {
+    type: string
+    sql: ${TABLE}.source ;;
+  }
+
+  dimension: status {
+    type:  string
+    sql: ${TABLE}.status ;;
+  }
+
+  dimension: status_display {
+    type: string
+    sql: CASE WHEN ${TABLE}.status = 'Completed_by_Collector' THEN 'Completed (Collector)'
+              WHEN ${TABLE}.status = 'DonorFailedToAttend' THEN 'Donor Failed to Attend'
+              WHEN ${TABLE}.status = 'Completed_by_Partner' THEN 'Completed (Partner)'
+              WHEN ${TABLE}.status = 'Planned_Unable' THEN 'Planned (Unable to Complete)'
+              WHEN ${TABLE}.status = 'Cancelled_FEE_Due' THEN 'Cancelled (Fee Due)'
+              WHEN ${TABLE}.status = 'Held' THEN 'Held'
+              WHEN ${TABLE}.status = 'Cancelled_No_Fee' THEN 'Cancelled (No Fee)'
+              WHEN ${TABLE}.status = 'Not_Held' THEN 'Not Held'
+              WHEN ${TABLE}.status = 'Planned_Accepted' THEN 'Planned (Accepted)'
+              WHEN ${TABLE}.status = 'Planned_Quoted' THEN 'Planned (Quoted)'
+              WHEN ${TABLE}.status = 'Planned_Accepted_DNA' THEN 'Planned (Accepted DNA)'
+              WHEN ${TABLE}.status = 'Planned_Provisional' THEN 'Planned (Provisional)'
+              WHEN ${TABLE}.status = 'Planned' THEN 'Planned'
+              WHEN ${TABLE}.status = 'quote_appointment_request_future' THEN 'Quote Apppointment Request Future'
+              WHEN ${TABLE}.status = 'quote_appointment_request' THEN 'Quote Appointment Request'
+              WHEN ${TABLE}.status = 'Completed' then 'Completed (MiM)'
+              WHEN ${TABLE}.status = 'participant_didnt_show' THEN 'Participant No Show (MiM)'
+              WHEN ${TABLE}.status = 'cancelled' THEN 'Cancelled (MiM)'
+              WHEN ${TABLE}.status = 'not_held' THEN 'Not Held (MiM)'
+              WHEN ${TABLE}.status = 'failed' THEN 'Failed (MiM)'
+              WHEN ${TABLE}.status = 'pending' THEN 'Pending (MiM)'
+              WHEN ${TABLE}.status = 'scheduled' THEN 'Scheduled (MiM)'
+              WHEN ${TABLE}.status = 'never_booked' THEN 'Never Booked (MiM)'
+              WHEN ${TABLE}.status = 'in_progress' THEN 'In Progress (MiM)'
+              WHEN ${TABLE}.status = 'on_my_way' THEN 'On My Way (MiM)'
+              WHEN ${TABLE}.status = 'partial_failure' THEN 'Partial Failure (MiM)'
+              WHEN ${TABLE}.status = 'participant_refused_collection' THEN 'Participant Refused Collection (MiM)'
+              ELSE 'not defined'
+              END;;
+  }
+  dimension: status_raw{
+    type: string
+    sql: ${TABLE}.status ;;
+  }
+
+
+  dimension: failed_reason {
+    type: string
+    sql: CASE WHEN ${TABLE}.failed_reason = 'did_not_attend' THEN 'Donor Did Not Attend'
+              WHEN ${TABLE}.failed_reason = 'did_not_consent' THEN 'Donor Did Not Consent'
+              WHEN ${TABLE}.failed_reason = 'collector_error' THEN 'Collector Error'
+              ELSE ${TABLE}.failed_reason END;;
+  }
+  dimension: failure_rate {
+    description: "Appointment Status grouped by 'Failed','Cancelled','Completed', and 'Ongoing'"
+    type: string
+    sql: CASE WHEN ${TABLE}.status IN (
+    'Planned_Unable'
+    ,'Not_Held'
+    ,'not_held'
+    ,'DonorFailedToAttend'
+    ,'failed')
+    THEN 'appointment_failed'
+    WHEN ${TABLE}.status IN (
+    'Cancelled_No_Fee'
+    ,'Cancelled_FEE_Due'
+    ,'cancelled')
+    THEN 'appointment_cancelled'
+    WHEN ${TABLE}.status IN(
+    'Completed_by_Collector'
+    ,'Completed_by_Partner'
+    ,'completed')
+    THEN 'appointment_completed'
+    ELSE 'appointment_ongoing' END;;
+  }
+
+  dimension_group: appointment_held {
+    description: "The date when the appointment was held."
+    type: time
+    timeframes: [raw, time, date, week, month, quarter, year, month_name, month_num, day_of_week, day_of_week_index, day_of_month]
+    datatype: timestamp
+    sql: ${TABLE}.time ;;
+  }
+
+  dimension_group: appointment_time {
+    description: "The time when the appointment was held."
+    type: time
+    timeframes: [time_of_day]
+    datatype: timestamp
+    sql: DATETIME_ADD(${TABLE}.time, INTERVAL 1 HOUR) ;;
+  }
+
+  dimension_group: updated {
+    type: time
+    timeframes: [raw, time, date, week, month, quarter, year, month_name, month_num]
+    sql: ${TABLE}.updated_at ;;
+  }
+  dimension: appointment_link {
+    type: string
+    sql: ${TABLE}.id ;;
+    html: <a href="https://dna.enablecloud.co.uk/#appts_appointments/{{value}}"><button>{{value}}}</button></a> ;;
+  }
+
+  dimension: collection_grading {
+    type: string
+    sql: ${TABLE}.collection_grading ;;
+  }
+
+  dimension: paperwork_grading {
+    type: string
+    sql: ${TABLE}.paperwork_grading ;;
+  }
+
+  dimension: comments {
+    type: string
+    sql: ${TABLE}.comments ;;
+  }
+
+  dimension_group: date_raised_with_collector {
+    type: time
+    timeframes: [raw, time, date, week, month, quarter, year, month_name, month_num]
+    sql: ${TABLE}.date_raised_with_collector;;
+  }
+
+  dimension: action_taken {
+    type: string
+    sql: ${TABLE}.action_taken ;;
+  }
+
+  dimension_group: date_improvement_checked {
+    type: time
+    timeframes: [raw, time, date, week, month, quarter, year, month_name, month_num]
+    sql: ${TABLE}.date_improvement_checked ;;
+  }
+
+  dimension: review_passed {
+    type: string
+    sql: ${TABLE}.review_comments ;;
+  }
+
+  dimension: non_conformity_report {
+    type: string
+    sql: ${TABLE}.non_conformity_report ;;
+  }
+
+  dimension_group: date_of_appointment {
+    type: time
+    timeframes: [raw, time_of_day, day_of_week, date, week, month, quarter, year, month_name, month_num]
+    sql: ${TABLE}.time ;;
+  }
+
+  dimension: appointment_fee {
+    type: number
+    sql: ${TABLE}.appointment_fee ;;
+    value_format_name: "gbp"
+  }
+
+  dimension: is_appointment_out_of_hours {
+    label: "Is appointment out of hours?"
+    type: yesno
+    description: "Returns 'Yes' if the appointment time is before 8:00 AM OR at 17:00 (5 PM) or later. This is based on the database's timezone."
+    sql: (EXTRACT(HOUR FROM ${date_of_appointment_raw}) < 8) OR
+      (EXTRACT(HOUR FROM ${date_of_appointment_raw}) >= 17) ;;
+  }
+
+  measure: count {
+    type: count
+    drill_fields: [id]
+  }
+
+  measure: total_appointment_fee {
+    type: sum
+    sql: ${appointment_fee} ;;
+    value_format_name: "gbp"
+  }
+  measure: appointment_list {
+    type: list
+    list_field: appointment_held_date
+  }
+
+  measure: count_booked_not_held_appointments {
+    type: sum
+    label: "Appointments Booked But Not Yet Held"
+    value_format_name: decimal_0
+    sql:
+    CASE
+      WHEN ${status} IN (
+        'Planned',
+        'Planned_Accepted',
+        'Planned_Accepted_DNA',
+        'Planned_Quoted',
+        'Planned_Provisional',
+        'Planned_Unable',
+        'quote_appointment_request',
+        'quote_appointment_request_future',
+        'scheduled'
+      ) AND ${appointment_held_raw} IS NULL
+      THEN 1
+      ELSE NULL
+    END ;;
+    drill_fields: [id]
+  }
+
+
+
+
+# -----------------------------
+# BOOKINGS — COUNTS & PERCENTS
+# -----------------------------
+
+# Canonical "All Time" (merged - my merge, to clean duplicates, or similar logics)
+  measure: count_appointments_booked_all_time {
+    group_label: "Data – Measures"
+    type: count_distinct
+    sql: ${id} ;;
+    filters: [appointment_booked_date: "-NULL"]
+    label: "Appointments Booked (All Time)"
+    value_format_name: decimal_0
+  }
+
+  measure: count_appointments_booked_this_year {
+    group_label: "Data – Measures"
+    type: count_distinct
+    sql: ${appointments.id} ;;
+    filters: [appointments.appointment_booked_date: "this year"]
+    label: "Appointments Booked (This Year)"
+    value_format_name: decimal_0
+  }
+
+  measure: count_appointments_booked_last_year {
+    group_label: "Data – Measures"
+    type: count_distinct
+    sql: ${appointments.id} ;;
+    filters: [appointments.appointment_booked_date: "last year"]
+    label: "Appointments Booked (Last Year)"
+    value_format_name: decimal_0
+  }
+
+# Keep ONE “this month” version (filter-based, distinct)
+  measure: count_appointments_booked_this_month {
+    group_label: "Data – Measures"
+    type: count_distinct
+    sql: ${appointments.id} ;;
+    filters: [appointments.appointment_booked_date: "this month"]
+    label: "Appointments Booked (This Month)"
+    value_format_name: decimal_0
+  }
+
+  measure: count_appointments_booked_last_month {
+    group_label: "Data – Measures"
+    type: count_distinct
+    sql: ${appointments.id} ;;
+    filters: [appointments.appointment_booked_date: "last month"]
+    label: "Appointments Booked (Last Month)"
+    value_format_name: decimal_0
+  }
+
+  measure: count_appointments_booked_2_months_ago {
+    group_label: "Data – Measures"
+    type: count_distinct
+    sql: ${appointments.id} ;;
+    filters: [appointments.appointment_booked_date: "2 months ago"]
+    label: "Appointments Booked (2 Months Ago)"
+    value_format_name: decimal_0
+  }
+
+  measure: count_appointments_booked_3_months_ago {
+    group_label: "Data – Measures"
+    type: count_distinct
+    sql: ${appointments.id} ;;
+    filters: [appointments.appointment_booked_date: "3 months ago"]
+    label: "Appointments Booked (3 Months Ago)"
+    value_format_name: decimal_0
+  }
+
+# Percents (updated to use the kept monthly measure)
+  measure: percent_appointments_month_vs_year {
+    group_label: "Data – Measures"
+    type: number
+    label: "% Appointments Booked (This Month vs Year)"
+    value_format_name: percent_1
+    sql: SAFE_DIVIDE(
+        ${count_appointments_booked_this_month},
+        NULLIF(${count_appointments_booked_this_year}, 0)
+      ) ;;
+  }
+
+  measure: percent_appointments_month_vs_total {
+    group_label: "Data – Measures"
+    type: number
+    label: "% Appointments Booked (This Month vs Total)"
+    value_format_name: percent_1
+    sql: SAFE_DIVIDE(
+        ${count_appointments_booked_this_month},
+        NULLIF(${count_appointments_booked_all_time}, 0)
+      ) ;;
+  }
+
+  measure: percent_appointments_30_days_vs_year {
+    group_label: "Data – Measures"
+    type: number
+    label: "% Appointments (Last 30 Days vs This Year)"
+    value_format_name: percent_1
+    sql: SAFE_DIVIDE(
+        COUNT(DISTINCT CASE
+          WHEN ${appointments.appointment_booked_date} >= DATE_SUB(CURRENT_DATE(), INTERVAL 30 DAY)
+           AND ${appointments.appointment_booked_date} <= CURRENT_DATE()
+          THEN ${appointments.id}
+        END),
+        COUNT(DISTINCT CASE
+          WHEN EXTRACT(YEAR FROM ${appointments.appointment_booked_date}) = EXTRACT(YEAR FROM CURRENT_DATE())
+          THEN ${appointments.id}
+        END)
+      ) ;;
+  }
+
+# -----------------------------
+# CANCELLATIONS — WEEKENDS
+# -----------------------------
+
+  measure: cancelled_past_weekend {
+    group_label: "Data – Measures"
+    type: count_distinct
+    label: "Cancelled – Past Weekend"
+    value_format_name: decimal_0
+    sql: CASE
+         WHEN ${appointments.status_display} IN ('Cancelled (MiM)', 'Cancelled (No Fee)', 'Cancelled (Fee Due)')
+          AND DATE(${appointments.updated_raw}) BETWEEN
+              DATE_SUB(CURRENT_DATE(), INTERVAL EXTRACT(DAYOFWEEK FROM CURRENT_DATE()) + 0 DAY)
+              AND DATE_SUB(CURRENT_DATE(), INTERVAL EXTRACT(DAYOFWEEK FROM CURRENT_DATE()) - 2 DAY)
+         THEN ${appointments.id}
+       END ;;
+  }
+
+  measure: cancelled_past_weekend_no_fee {
+    group_label: "Data – Measures"
+    type: count_distinct
+    label: "Cancelled – Past Weekend (No Fee)"
+    value_format_name: decimal_0
+    sql: CASE
+         WHEN ${appointments.status_display} = 'Cancelled (No Fee)'
+          AND DATE(${appointments.updated_raw}) BETWEEN
+              DATE_SUB(CURRENT_DATE(), INTERVAL EXTRACT(DAYOFWEEK FROM CURRENT_DATE()) + 0 DAY)
+              AND DATE_SUB(CURRENT_DATE(), INTERVAL EXTRACT(DAYOFWEEK FROM CURRENT_DATE()) - 2 DAY)
+         THEN ${appointments.id}
+       END ;;
+  }
+
+  measure: cancelled_past_weekend_fee_due {
+    group_label: "Data – Measures"
+    type: count_distinct
+    label: "Cancelled – Past Weekend (Fee Due)"
+    value_format_name: decimal_0
+    sql: CASE
+         WHEN ${appointments.status_display} = 'Cancelled (Fee Due)'
+          AND DATE(${appointments.updated_raw}) BETWEEN
+              DATE_SUB(CURRENT_DATE(), INTERVAL EXTRACT(DAYOFWEEK FROM CURRENT_DATE()) + 0 DAY)
+              AND DATE_SUB(CURRENT_DATE(), INTERVAL EXTRACT(DAYOFWEEK FROM CURRENT_DATE()) - 2 DAY)
+         THEN ${appointments.id}
+       END ;;
+  }
+
+  measure: cancelled_two_past_weekends {
+    group_label: "Data – Measures"
+    type: count_distinct
+    label: "Cancelled – Two Past Weekends"
+    value_format_name: decimal_0
+    sql: CASE
+         WHEN ${appointments.status_display} IN ('Cancelled (MiM)', 'Cancelled (No Fee)', 'Cancelled (Fee Due)')
+          AND DATE(${appointments.updated_raw}) BETWEEN
+              DATE_SUB(CURRENT_DATE(), INTERVAL (EXTRACT(DAYOFWEEK FROM CURRENT_DATE()) + 7) DAY)
+              AND DATE_SUB(CURRENT_DATE(), INTERVAL (EXTRACT(DAYOFWEEK FROM CURRENT_DATE()) + 5) DAY)
+         THEN ${appointments.id}
+       END ;;
+  }
+
+  measure: cancelled_two_past_weekends_fee_due {
+    group_label: "Data – Measures"
+    type: count_distinct
+    label: "Cancelled – Two Past Weekends (Fee Due)"
+    value_format_name: decimal_0
+    sql: CASE
+         WHEN ${appointments.status_display} = 'Cancelled (Fee Due)'
+          AND DATE(${appointments.updated_raw}) BETWEEN
+              DATE_SUB(CURRENT_DATE(), INTERVAL (EXTRACT(DAYOFWEEK FROM CURRENT_DATE()) + 7) DAY)
+              AND DATE_SUB(CURRENT_DATE(), INTERVAL (EXTRACT(DAYOFWEEK FROM CURRENT_DATE()) + 5) DAY)
+         THEN ${appointments.id}
+       END ;;
+  }
+
+  measure: cancelled_two_past_weekends_no_fee {
+    group_label: "Data – Measures"
+    type: count_distinct
+    label: "Cancelled – Two Past Weekends (No Fee)"
+    value_format_name: decimal_0
+    sql: CASE
+         WHEN ${appointments.status_display} = 'Cancelled (No Fee)'
+          AND DATE(${appointments.updated_raw}) BETWEEN
+              DATE_SUB(CURRENT_DATE(), INTERVAL (EXTRACT(DAYOFWEEK FROM CURRENT_DATE()) + 7) DAY)
+              AND DATE_SUB(CURRENT_DATE(), INTERVAL (EXTRACT(DAYOFWEEK FROM CURRENT_DATE()) + 5) DAY)
+         THEN ${appointments.id}
+       END ;;
+  }
+
+  measure: cancelled_three_past_weekends_fee_due {
+    group_label: "Data – Measures"
+    type: count_distinct
+    label: "Cancelled – Three Past Weekends (Fee Due)"
+    value_format_name: decimal_0
+    sql: CASE
+         WHEN ${appointments.status_display} = 'Cancelled (Fee Due)'
+          AND DATE(${appointments.updated_raw}) BETWEEN
+              DATE_SUB(CURRENT_DATE(), INTERVAL (EXTRACT(DAYOFWEEK FROM CURRENT_DATE()) + 14) DAY)
+              AND DATE_SUB(CURRENT_DATE(), INTERVAL (EXTRACT(DAYOFWEEK FROM CURRENT_DATE()) + 12) DAY)
+         THEN ${appointments.id}
+       END ;;
+  }
+
+  measure: cancelled_three_past_weekends_no_fee {
+    group_label: "Data – Measures"
+    type: count_distinct
+    label: "Cancelled – Three Past Weekends (No Fee)"
+    value_format_name: decimal_0
+    sql: CASE
+         WHEN ${appointments.status_display} = 'Cancelled (No Fee)'
+          AND DATE(${appointments.updated_raw}) BETWEEN
+              DATE_SUB(CURRENT_DATE(), INTERVAL (EXTRACT(DAYOFWEEK FROM CURRENT_DATE()) + 14) DAY)
+              AND DATE_SUB(CURRENT_DATE(), INTERVAL (EXTRACT(DAYOFWEEK FROM CURRENT_DATE()) + 12) DAY)
+         THEN ${appointments.id}
+       END ;;
+  }
+
+  measure: cancelled_four_past_weekends_fee_due {
+    group_label: "Data – Measures"
+    type: count_distinct
+    label: "Cancelled – Four Past Weekends (Fee Due)"
+    value_format_name: decimal_0
+    sql: CASE
+         WHEN ${appointments.status_display} = 'Cancelled (Fee Due)'
+          AND DATE(${appointments.updated_raw}) BETWEEN
+              DATE_SUB(CURRENT_DATE(), INTERVAL (EXTRACT(DAYOFWEEK FROM CURRENT_DATE()) + 21) DAY)
+              AND DATE_SUB(CURRENT_DATE(), INTERVAL (EXTRACT(DAYOFWEEK FROM CURRENT_DATE()) + 19) DAY)
+         THEN ${appointments.id}
+       END ;;
+  }
+
+  measure: cancelled_four_past_weekends_no_fee {
+    group_label: "Data – Measures"
+    type: count_distinct
+    label: "Cancelled – Four Past Weekends (No Fee)"
+    value_format_name: decimal_0
+    sql: CASE
+         WHEN ${appointments.status_display} = 'Cancelled (No Fee)'
+          AND DATE(${appointments.updated_raw}) BETWEEN
+              DATE_SUB(CURRENT_DATE(), INTERVAL (EXTRACT(DAYOFWEEK FROM CURRENT_DATE()) + 21) DAY)
+              AND DATE_SUB(CURRENT_DATE(), INTERVAL (EXTRACT(DAYOFWEEK FROM CURRENT_DATE()) + 19) DAY)
+         THEN ${appointments.id}
+       END ;;
+  }
+
+# ---------------------------------------------------
+# LONDON TIME — NEXT WEEK (Happens)
+# ---------------------------------------------------
+
+  # London-ized scheduled time (HAPPENS)
+  dimension_group: appt_happen_ldn {
+    group_label: "London Time – Next Week (Happens)"
+    type: time
+    label: "Appointment Happens (London)"
+    timeframes: [raw, date, week, month, quarter, year, hour_of_day, day_of_week]
+    sql: TIMESTAMP(DATETIME(${date_of_appointment_raw}, "Europe/London")) ;;
+  }
+
+# Next week flag (Mon–Sun, London)
+  dimension: happens_next_week_monday_sunday {
+    group_label: "London Time – Next Week (Happens)"
+    type: yesno
+    sql:
+    DATE(${appt_happen_ldn_raw}) BETWEEN
+      DATE_TRUNC(CURRENT_DATE("Europe/London"), WEEK(MONDAY)) + 7
+      AND
+      DATE_TRUNC(CURRENT_DATE("Europe/London"), WEEK(MONDAY)) + 13 ;;
+  }
+
+# Friendly day/hour (based on HAPPENS)
+  dimension: happen_day_name {
+    group_label: "London Time – Next Week (Happens)"
+    type: string
+    sql: FORMAT_DATE('%A', DATE(${appt_happen_ldn_raw})) ;;
+    order_by_field: happen_day_index_monday_first
+    label: "Happens Day Name"
+  }
+
+  dimension: happen_day_index_monday_first {
+    group_label: "London Time – Next Week (Happens)"
+    type: number
+    sql: MOD(EXTRACT(DAYOFWEEK FROM DATE(${appt_happen_ldn_raw})) + 5, 7) + 1 ;;
+    label: "Happens Day Index (Mon=1)"
+  }
+
+  dimension: happen_hour_of_day {
+   group_label: "London Time – Next Week (Happens)"
+   type: number
+   sql: EXTRACT(HOUR FROM ${appt_happen_ldn_raw}) ;;
+    label: "Happens Hour of Day"
+  }
+
+
+
+  ##########################################################
+  # sort the display of nulls, the ugly symbol
+
+ ## dimension: happen_hour_of_day {
+    ##  type: string
+     ## sql:
+       ##   CASE
+       ##     WHEN ${appt_happen_ldn_raw} IS NULL THEN ''
+         #  ELSE CAST(EXTRACT(HOUR FROM ${appt_happen_ldn_raw}) AS STRING)
+         # END ;;
+    #}
+    # Blank-Safe hour (make it string)
+
+  #dimension: happen_hour_of_day_display {
+  #  group_label: "London Time – Next Week (Happens)"
+   # type: string
+   # sql:
+    #CASE
+    #  WHEN ${appt_happen_ldn_raw} IS NULL THEN ''
+     # ELSE CAST(EXTRACT(HOUR FROM ${appt_happen_ldn_raw}) AS STRING)
+   # END ;;
+  #  label: "Null_Hour of Day"
+  #}
+
+    # the measure itselfs renders blank
+
+  #measure: appts_happening_next_week_display {
+  #  group_label: "London Time – Next Week (Happens)"
+   # type: string
+   # sql:
+   # CASE
+  #    WHEN ${appts_happening_next_week_iso} IS NULL THEN ''
+  #    ELSE CAST(${appts_happening_next_week_iso} AS STRING)
+  #  END ;;
+  #  label: "Appointments Happening Next Week (Mon–Sun)"
+ # }
+  ##########################################################
+
+
+# Count of appts that HAPPEN next week (Mon–Sun)
+
+ # the one that tis shaded out is without the replacement of nulls symbol which is so ugly
+
+ measure: appts_happening_next_week_iso {
+    group_label: "London Time – Next Week (Happens)"
+    type: count
+    label: "Appointments Happening Next Week (Mon–Sun)"
+    filters: [happens_next_week_monday_sunday: "yes"]
+  }
+
+  # measure: appts_happening_next_week_iso {
+    #group_label: "London Time – Next Week (Happens)"
+    #type: number
+    #label: "Appointments Happening Next Week (Mon–Sun)"
+    #sql: IFNULL(
+     #    SUM(
+     #      CASE
+      #       WHEN ${happens_next_week_monday_sunday} THEN 1
+      #       ELSE 0
+      #     END
+      #   ),
+      #   "-"
+      # ) ;;
+#  }
+
+
+
+  # --------------------------------------
+# LONDON TIME — SUMMARY
+# --------------------------------------
+
+
+  dimension_group: appointment_held_london {
+    group_label: "London Time – Summary"
+    label: "Appointment Held (London)"
+    type: time
+    timeframes: [raw, time, date, week, month, quarter, year, hour_of_day, day_of_week]
+    sql: DATETIME(${appointment_held_raw}, "Europe/London") ;;
+    # (if it does not work try this : sql: DATETIME(${TABLE}.time, "Europe/London") ;; )
+  }
+
+
+
+  dimension: is_held {
+    group_label: "London Time – Summary"
+    type: yesno
+    sql: ${status_display} IN ('Held','Completed (MiM)','Completed (Collector)','Completed (Partner)') ;;
+  }
+
+  measure: appts_held_last_7_days_london {
+    group_label: "London Time – Summary"
+    label: "Appointments Held (Last 7 Days – London)"
+    type: number
+    value_format_name: decimal_0
+    sql:
+    SUM(
+      CASE
+        WHEN ${is_held}
+         AND ${appointment_held_london_date}
+               BETWEEN DATE_SUB(CURRENT_DATE("Europe/London"), INTERVAL 6 DAY)
+                   AND CURRENT_DATE("Europe/London")
+        THEN 1 ELSE 0
+      END
+    ) ;;
+  }
+
+  measure: appts_booked_last_7_days_london {
+    group_label: "London Time – Summary"
+    label: "Booked (Last 7 Days – London)"
+    type: number
+    value_format_name: decimal_0
+    sql:
+    SUM(
+      CASE
+        WHEN ${appointment_booked_london_date}
+               BETWEEN DATE_SUB(CURRENT_DATE("Europe/London"), INTERVAL 6 DAY)
+                   AND CURRENT_DATE("Europe/London")
+        THEN 1 ELSE 0
+      END
+    ) ;;
+  }
+
+# --- Cancellation Logic (London Time) ---
+  dimension: is_cancelled {
+    group_label: "London Time – Summary"
+    type: yesno
+    sql: ${status_display} IN ('Cancelled (MiM)', 'Cancelled (No Fee)', 'Cancelled (Fee Due)') ;;
+  }
+
+
+# --------------------------------------
+# LONDON TIME — SUMMARY (30 days vs Year)
+# --------------------------------------
+
+# Counts every cancelled appointment (no date restriction)
+
+  measure: cancellations_all_time {
+    group_label: "Data – Measures"
+    label: "Cancellations (All Time)"
+    type: count
+    filters: [is_cancelled: "yes"]
+    value_format_name: decimal_0
+    drill_fields: [id, status_display, cancel_date_london_date, cancel_day_name, cancel_hour_of_day]
+  }
+
+  measure: cancellations_last_30_days_london {
+    group_label: "London Time – Summary"
+    label: "Cancellations (Last 30 Days – London)"
+    type: number
+    value_format_name: decimal_0
+    sql:
+      SUM(
+        CASE
+          WHEN ${is_cancelled}
+           AND ${cancel_date_london_date}
+               BETWEEN DATE_SUB(CURRENT_DATE("Europe/London"), INTERVAL 29 DAY)
+                       AND CURRENT_DATE("Europe/London")
+          THEN 1 ELSE 0
+        END
+      ) ;;
+  }
+
+  measure: cancellations_this_year_london {
+    group_label: "London Time – Summary"
+    label: "Cancellations (This Year – London)"
+    type: number
+    value_format_name: decimal_0
+    sql:
+      SUM(
+        CASE
+          WHEN ${is_cancelled}
+           AND EXTRACT(YEAR FROM ${cancel_date_london_date})
+               = EXTRACT(YEAR FROM CURRENT_DATE("Europe/London"))
+          THEN 1 ELSE 0
+        END
+      ) ;;
+  }
+
+  measure: pct_cancellations_30_days_vs_year_london {
+    group_label: "London Time – Summary"
+    label: "% Cancellations (Last 30 Days vs This Year – London)"
+    type: number
+    value_format_name: percent_1
+    sql: SAFE_DIVIDE(${cancellations_last_30_days_london}, NULLIF(${cancellations_this_year_london}, 0)) ;;
+  }
+
+  measure: appts_booked_last_30_days_london {
+    group_label: "London Time – Summary"
+    label: "Booked (Last 30 Days – London)"
+    type: number
+    value_format_name: decimal_0
+    sql:
+      SUM(
+        CASE
+          WHEN ${appointment_booked_london_date}
+               BETWEEN DATE_SUB(CURRENT_DATE("Europe/London"), INTERVAL 29 DAY)
+                       AND CURRENT_DATE("Europe/London")
+          THEN 1 ELSE 0
+        END
+      ) ;;
+  }
+
+  measure: appts_booked_this_year_london {
+    group_label: "London Time – Summary"
+    label: "Booked (This Year – London)"
+    type: number
+    value_format_name: decimal_0
+    sql:
+      SUM(
+        CASE
+          WHEN EXTRACT(YEAR FROM ${appointment_booked_london_date})
+               = EXTRACT(YEAR FROM CURRENT_DATE("Europe/London"))
+          THEN 1 ELSE 0
+        END
+      ) ;;
+  }
+
+  measure: pct_booked_30_days_vs_year_london {
+    group_label: "London Time – Summary"
+    label: "% Booked (Last 30 Days vs This Year – London)"
+    type: number
+    value_format_name: percent_1
+    sql: SAFE_DIVIDE(${appts_booked_last_30_days_london}, NULLIF(${appts_booked_this_year_london}, 0)) ;;
+  }
+
+  measure: appts_held_last_30_days_london {
+    group_label: "London Time – Summary"
+    label: "Held (Last 30 Days – London)"
+    type: number
+    value_format_name: decimal_0
+    sql:
+      SUM(
+        CASE
+          WHEN ${appointment_held_london_date}
+               BETWEEN DATE_SUB(CURRENT_DATE("Europe/London"), INTERVAL 29 DAY)
+                       AND CURRENT_DATE("Europe/London")
+          THEN 1 ELSE 0
+        END
+      ) ;;
+  }
+
+  measure: appts_held_this_year_london {
+    group_label: "London Time – Summary"
+    label: "Held (This Year – London)"
+    type: number
+    value_format_name: decimal_0
+    sql:
+      SUM(
+        CASE
+          WHEN EXTRACT(YEAR FROM ${appointment_held_london_date})
+               = EXTRACT(YEAR FROM CURRENT_DATE("Europe/London"))
+          THEN 1 ELSE 0
+        END
+      ) ;;
+  }
+
+  measure: pct_held_30_days_vs_year_london {
+    group_label: "London Time – Summary"
+    label: "% Held (Last 30 Days vs This Year – London)"
+    type: number
+    value_format_name: percent_1
+    sql: SAFE_DIVIDE(${appts_held_last_30_days_london}, NULLIF(${appts_held_this_year_london}, 0)) ;;
+  }
+
+# ---------------------------------
+# DIMENSION GROUPING (plain fields)
+# ---------------------------------
+
+  dimension_group: cancel_time {
+    group_label: "Data – Dimensions-London_Time"
+    type: time
+    sql: TIMESTAMP(DATETIME(${TABLE}.updated_at, "Europe/London")) ;;
+    timeframes: [raw, date, day_of_week, day_of_week_index, hour_of_day, week, month]
+  }
+
+  dimension: cancel_date {
+    group_label: "Data – Dimensions-London_Time"
+    type: date
+    sql: DATE(${cancel_time_raw}) ;;
+  }
+
+  dimension: cancel_day_index {
+    group_label: "Data – Dimensions-London_Time"
+    type: number
+    sql: EXTRACT(DAYOFWEEK FROM DATE(${cancel_time_raw})) ;;
+    description: "BigQuery: 1=Sunday … 7=Saturday"
+  }
+
+  dimension: cancel_day_index_monday_first {
+    group_label: "Data – Dimensions-London_Time"
+    type: number
+    sql: MOD(EXTRACT(DAYOFWEEK FROM DATE(${cancel_time_raw})) + 5, 7) + 1 ;;
+  }
+
+  dimension: cancel_day_name {
+    group_label: "Data – Dimensions-London_Time"
+    type: string
+    sql: FORMAT_DATE('%A', DATE(${cancel_time_raw})) ;;
+    order_by_field: cancel_day_index_monday_first
+  }
+
+  dimension: cancel_hour_of_day {
+    group_label: "Data – Dimensions-London_Time"
+    type: number
+    sql: EXTRACT(HOUR FROM ${cancel_time_raw}) ;;
+    description: "0–23, Europe/London"
+  }
+
+  dimension_group: cancel_date_london {
+    group_label: "Data – Dimensions-London_Time"
+    label: "Appointments Cancel Date(London)"
+    type: time
+    datatype: date
+    timeframes: [date, week, month, quarter, year]
+    sql: DATE(TIMESTAMP(DATETIME(${TABLE}.updated_at, "Europe/London"))) ;;
+  }
+
+  dimension_group: appointment_booked_london {
+    group_label: "Data – Dimensions-London_Time"
+    type: time
+    label: "Appointment Booked (London)"
+    timeframes: [raw, time, date, week, month, quarter, year, hour_of_day, day_of_week]
+    sql: DATETIME(${appointment_booked_raw}, "Europe/London") ;;
+  }
+
+  dimension: booked_day_index_monday_first {
+    group_label: "Data – Dimensions-London_Time"
+    type: number
+    sql: MOD(EXTRACT(DAYOFWEEK FROM DATE(${appointment_booked_london_raw})) + 5, 7) + 1 ;;
+  }
+
+  dimension: booked_day_name {
+    group_label: "Data – Dimensions-London_Time"
+    type: string
+    sql: FORMAT_DATE('%A', DATE(${appointment_booked_london_raw})) ;;
+    order_by_field: booked_day_index_monday_first
+  }
+
+  dimension: booked_hour_of_day {
+    group_label: "Data – Dimensions-London_Time"
+    type: number
+    sql: EXTRACT(HOUR FROM ${appointment_booked_london_raw}) ;;
+  }
+
+
+# ------------------------------------------ #
+# Appointment Success Metrics -> London Time
+# ------------------------------------------ #
+
+# Counts
+  measure: held_success_last_30_days_london {
+    group_label: "London Time – Summary"
+    label: "Held (Last 30 Days – London, Success)"
+    type: number
+    value_format_name: decimal_0
+    sql:
+    SUM(
+      CASE
+        WHEN ${is_held}
+         AND ${appointment_held_london_date}
+               BETWEEN DATE_SUB(CURRENT_DATE("Europe/London"), INTERVAL 29 DAY)
+                   AND CURRENT_DATE("Europe/London")
+        THEN 1 ELSE 0
+      END
+    ) ;;
+  }
+
+  measure: held_success_this_year_london {
+    group_label: "London Time – Summary"
+    label: "Held (This Year – London, Success)"
+    type: number
+    value_format_name: decimal_0
+    sql:
+    SUM(
+      CASE
+        WHEN ${is_held}
+         AND EXTRACT(YEAR FROM ${appointment_held_london_date})
+               = EXTRACT(YEAR FROM CURRENT_DATE("Europe/London"))
+        THEN 1 ELSE 0
+      END
+    ) ;;
+  }
+
+# Percent = last 30 days ÷ this year
+  measure: pct_held_success_30_days_vs_year_london {
+    group_label: "London Time – Summary"
+    label: "% Held (Last 30 Days vs This Year – London, Success)"
+    type: number
+    value_format_name: percent_1
+    sql: SAFE_DIVIDE(${held_success_last_30_days_london},
+      NULLIF(${held_success_this_year_london}, 0)) ;;
+  }
+
+# --- ─────────────────────────────────────────────── --- #
+# Appointment Held Trend Over Time – Daily (London Time)
+# --- ─────────────────────────────────────────────── --- #
+
+
+# Measure for daily held count
+ # measure: daily_appointments_held_london {
+  #  group_label: "London Time – Summary"
+  #  label: "Appointments Held – Daily (London)"
+   # type: number
+  #  value_format_name: decimal_0
+  #  sql:
+  #  SUM(
+   #   CASE
+   #     WHEN ${is_held} THEN 1
+   #     ELSE 0
+   #   END
+  #  ) ;;
+ # }
+
+
+# is_held: yes when status_display ∈ {Held, Completed…}
+
+  measure: daily_appointments_held_london {
+    group_label: "London Time – Trend"
+    label: "Appointments Held – Daily (London)"
+    type: number
+    value_format_name: decimal_0
+    sql: SUM(CASE WHEN ${is_held} THEN 1 ELSE 0 END) ;;
+    drill_fields: [id, status_display, appointment_held_london_date]
+  }
+
+}
