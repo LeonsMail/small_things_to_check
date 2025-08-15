@@ -1,10 +1,6 @@
-dimension_group: appointment_booked_london {
-  group_label: "Data – Dimensions-London_Time"
-  label: "Appointment Booked (London)"
-  type: time
-  timeframes: [raw, time, date, week, month, quarter, year, hour_of_day, day_of_week, day_of_week_index]
-  sql:
-    -- Convert the UTC raw timestamp to London wall time, then back to TIMESTAMP
-    TIMESTAMP(DATETIME(${appointment_booked_raw}, "Europe/London"))
-  ;;
-}
+SELECT 
+  COUNT(*) AS appointments_booked_all_time
+FROM 
+  `dna-legal-central-data.case_mart.appointments`
+WHERE 
+  appointment_booked IS NOT NULL
