@@ -8,3 +8,12 @@
       AND
       DATE_TRUNC(CURRENT_DATE("Europe/London"), WEEK(MONDAY)) + 13 ;;
   }
+
+
+
+dimension_group: cancel_time {
+    group_label: "Data – Dimensions-London_Time"
+    type: time
+    sql: TIMESTAMP(DATETIME(${TABLE}.updated_at, "Europe/London")) ;;
+    timeframes: [raw, date, day_of_week, day_of_week_index, hour_of_day, week, month]
+  }
