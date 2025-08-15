@@ -1,659 +1,410 @@
-include: "/views/joint_model/cases.view"
+view: cases {
+  sql_table_name: `dna-legal-central-data.case_mart.cases` ;;
+  drill_fields: [id]
 
-view: cases_operations {
-  extends: [cases]
-
-
-
-  dimension: sample_type_flag {
-    type: number
-    sql: CASE WHEN ${samples.sample_type} IS NOT NULL THEN 1 ELSE 0 END ;;
+  dimension: id {
+    primary_key: yes
+    type: string
+    description: "A unique identifier for the case within the CRM system"
+    sql: ${TABLE}.id ;;
+  }
+  dimension: account_id {
+    type: string
+    description: "A unique identifier for the account associated with the case"
+    sql: ${TABLE}.account_id ;;
+  }
+  dimension: case_number {
+    type: string
+    description: "The internal reference number for the case"
+    sql: ${TABLE}.case_number ;;
+  }
+  dimension: case_worker_id {
+    type: string
+    description: "The identifier for the case worker or legal professional assigned to the case"
+    sql: ${TABLE}.case_worker_id ;;
+  }
+  dimension: client_ref {
+    type: string
+    description: "(If applicable) The name of the client related to the case"
+    sql: ${TABLE}.client_ref ;;
+  }
+  dimension_group: court {
+    type: time
+    description: "(If applicable) The date and time of any scheduled court hearings or appearances"
+    timeframes: [raw, time, date, week, month, quarter, year]
+    sql: ${TABLE}.court_date ;;
   }
 
-  dimension: preferred_sample_flag {
-    type: number
-    sql: CASE WHEN ${tests.preferred_sample} IS NOT NULL THEN 1 ELSE 0 END ;;
+  dimension: date_is_null {
+    type: yesno
+    sql: ${TABLE}.court_date IS NULL ;;
+    description: "Returns 'Yes' if filing date is null. Used for custom sorting."
   }
 
+  dimension: court_ref {
+    type: string
+    description: "(If applicable) A reference number assigned by the court for the case"
+    sql: ${TABLE}.court_ref ;;
+  }
+  dimension_group: created {
+    type: time
+    description: "The time when the record was created"
+    timeframes: [raw, time, date, week, month, quarter, year]
+    sql: ${TABLE}.created_at ;;
+  }
+  dimension_group: deadline {
+    type: time
+    description: "(If applicable) The deadline or due date for completing the case or specific tasks"
+    timeframes: [raw, time, date, week, month, quarter, year]
+    sql: ${TABLE}.deadline_date ;;
+  }
+  dimension: priority {
+    type: string
+    description: "The priority level assigned to the case"
+    sql: ${TABLE}.priority ;;
+  }
+  dimension: sales_person_id {
+    type: string
+    description: "The identifier for the sales person associated with the case"
+    sql: ${TABLE}.sales_person_id ;;
+  }
+  dimension_group: sample_by {
+    type: time
+    description: "(If applicable) The date by which samples need to be collected or provided"
+    timeframes: [raw, time, date, week, month, quarter, year]
+    sql: ${TABLE}.sample_by_date ;;
+  }
+  dimension: source {
+    type: string
+    description: "The source of the data (mim or sugar_crm)"
+    sql: ${TABLE}.source ;;
+  }
+  dimension_group: start {
+    type: time
+    description: "The date and time the case was officially started or opened"
+    timeframes: [raw, time, date, week, month, quarter, year]
+    sql: ${TABLE}.start_date ;;
+  }
 
+  dimension: hair_colour {
+    label: "Raw Hair Colour"
+    type: string
+    sql: ${TABLE}.hair_colour ;;
+  }
 
-  measure: samples_collected_all_time_weighted_v4 {
-    label: "Samples Collected (All Time – Weighted V4)"
-    type: number
-    value_format_name: decimal_0
+  dimension: status {
+    type: string
+    description: "The current status of the case"
+      sql: CASE WHEN ${TABLE}.status = '0f' THEN 'Booking Appointments'
+              WHEN ${TABLE}.status = '0i' THEN 'Awaiting Setup'
+              WHEN ${TABLE}.status = '1' THEN 'Appointment Booked'
+              WHEN ${TABLE}.status = '1a' THEN 'Awaiting Samples'
+              WHEN ${TABLE}.status = '2' THEN 'Testing Underway'
+              WHEN ${TABLE}.status = '3' THEN 'Testing Completed'
+              WHEN ${TABLE}.status = '30' THEN 'On Hold'
+              WHEN ${TABLE}.status = '31' THEN 'Future Case'
+              WHEN ${TABLE}.status = '40' THEN 'Training/Duplicate'
+              WHEN ${TABLE}.status = '5' THEN 'Case Completed'
+              WHEN ${TABLE}.status = '63' THEN 'Not Proceeding'
+              WHEN ${TABLE}.status = '64' THEN 'Case Contact Closure'
+              ELSE ${TABLE}.status END ;;
+  }
+  dimension: subject {
+    type: string
+    description: "A brief description or summary of the case's subject matter"
+    sql: ${TABLE}.subject ;;
+  }
+  dimension: testing_type {
+    type: string
+    description: "The type of testing or legal service involved in the case"
+    sql: ${TABLE}.testing_type ;;
+  }
+  dimension: hair_treatment_details {
+    type: string
+    sql: ${TABLE}.hair_treatment_details ;;
+  }
 
+  dimension_group: updated {
+    type: time
+    description: "The time when the record was last updated"
+    timeframes: [raw, time, date, week, month, quarter, year]
+    sql: ${TABLE}.updated_at ;;
+  }
+  dimension_group: completed {
+    type: time
+    description: "The time when the case was completed."
+    timeframes: [raw, time, date, week, month, quarter, year]
+    sql: ${TABLE}.completed_at ;;
+  }
+  measure: count {
+    type: count
+    drill_fields: [id]
+  }
+  ## Hair Corelation ##
+  dimension: parsed_hair_treatment_category {
+    label: "Hair Treatment Category (Parsed)"
+    type: string
     sql:
-    SUM(
-      -- MiM dataset
-      CASE
-        WHEN ${samples.sample_type} IS NOT NULL THEN
-          CASE ${samples.sample_type}
-            WHEN 'blood' THEN 2
-            WHEN 'head_hair' THEN 2
-            WHEN 'body_hair' THEN 2
-            WHEN 'mouth_swab' THEN 1
-            WHEN 'nail' THEN 1
-            WHEN 'urine' THEN 1
-            WHEN 'saliva' THEN 1
-            WHEN 'scram_bracelet' THEN 1
-            WHEN 'instant_urine' THEN 1
-            WHEN 'instant_oral_fluid' THEN 1
-            WHEN 'instant_breath' THEN 1
-            ELSE 0
-          END
-        ELSE 0
-      END
-      +
-      -- Sugar: preferred_sample
-      CASE
-        WHEN ${tests.preferred_sample} IS NOT NULL THEN
-          CASE LOWER(${tests.preferred_sample})
-            WHEN 'blood' THEN 2
-            WHEN 'head hair' THEN 2
-            WHEN 'head_hair' THEN 2
-            WHEN 'body_hair' THEN 2
-            WHEN 'body hair' THEN 2
-            WHEN 'fingernail' THEN 1
-            WHEN 'toenail' THEN 1
-            WHEN 'nail' THEN 1
-            WHEN 'mouth_swab' THEN 1
-            WHEN 'saliva' THEN 1
-            WHEN 'urine' THEN 1
-            WHEN 'scram_bracelet' THEN 1
-            WHEN 'instant_urine' THEN 1
-            WHEN 'instant_oral_fluid' THEN 1
-            WHEN 'instant_breath' THEN 1
-            ELSE 0
-          END
-        ELSE 0
-      END
-      +
-      -- Sugar: test_required
-      CASE
-        WHEN ${tests.test_required} IS NOT NULL THEN
-            IF(REGEXP_CONTAINS(LOWER(${tests.test_required}), r'peth'), 2, 0) +
-            IF(REGEXP_CONTAINS(LOWER(${tests.test_required}), r'fbc'), 2, 0) +
-            IF(REGEXP_CONTAINS(LOWER(${tests.test_required}), r'cdt'), 2, 0) +
-            IF(REGEXP_CONTAINS(LOWER(${tests.test_required}), r'lft'), 2, 0) +
-            IF(REGEXP_CONTAINS(LOWER(${tests.test_required}), r'etg'), 2, 0) +
-            IF(REGEXP_CONTAINS(LOWER(${tests.test_required}), r'faee'), 2, 0) +
-            IF(REGEXP_CONTAINS(LOWER(${tests.test_required}), r'scram'), 1, 0) +
-            IF(REGEXP_CONTAINS(LOWER(${tests.test_required}), r'breath'), 1, 0)
-        ELSE 0
-      END
-    ) ;;
+    CASE
+      WHEN LOWER(${hair_treatment_details}) LIKE '%bleach%'
+        OR LOWER(${hair_treatment_details}) LIKE '%dye%'
+        OR LOWER(${hair_treatment_details}) LIKE '%highlight%'
+        OR LOWER(${hair_treatment_details}) LIKE '%peroxide%'
+        THEN 'Dyed or Bleached'
+
+      WHEN LOWER(${hair_treatment_details}) LIKE '%gel%'
+      OR LOWER(${hair_treatment_details}) LIKE '%wax%'
+      OR LOWER(${hair_treatment_details}) LIKE '%spray%'
+      OR LOWER(${hair_treatment_details}) LIKE '%clay%'
+      THEN 'Styling Product'
+
+      WHEN LOWER(${hair_treatment_details}) LIKE '%head & shoulders%'
+      OR LOWER(${hair_treatment_details}) LIKE '%garnier%'
+      OR LOWER(${hair_treatment_details}) LIKE '%neutrogena%'
+      OR LOWER(${hair_treatment_details}) LIKE '%pantene%'
+      THEN 'Shampoo Only'
+
+      WHEN LOWER(${hair_treatment_details}) LIKE '%psoriasis%'
+      OR LOWER(${hair_treatment_details}) LIKE '%dandruff%'
+      THEN 'Medical or Prescribed'
+
+      WHEN TRIM(${hair_treatment_details}) IN ('', ',', '^^') THEN 'Uninterpretable'
+
+      ELSE 'Other'
+      END ;;
   }
 
-  measure: samples_collected_last_year_weighted {
-    label: "Samples Collected (Last Year – Weighted)"
-    type: number
-    value_format_name: decimal_0
+  dimension: hair_colour_grouped {
+    label: "Hair Colour"
+    type: string
+    sql:
+    CASE
+      WHEN LOWER(${hair_colour}) = 'blackhair' THEN 'Black'
+      WHEN LOWER(${hair_colour}) = 'blondhair' THEN 'Blonde'
+      WHEN LOWER(${hair_colour}) = 'brownhair' THEN 'Brown'
+      WHEN LOWER(${hair_colour}) = 'redhair' THEN 'Red'
+      WHEN LOWER(${hair_colour}) = 'grayandwhitehair' THEN 'Grey/White'
+      WHEN LOWER(${hair_colour}) = 'chestnuthair' THEN 'Chestnut'
+      WHEN LOWER(${hair_colour}) = 'auburnhair' THEN 'Auburn'
+      ELSE 'Other'
+    END ;;
+  }
 
-    sql: SUM(
-          CASE
-            WHEN EXTRACT(YEAR FROM ${appointments.appointment_held_raw}) = EXTRACT(YEAR FROM CURRENT_DATE()) - 1
-            THEN
-              -- MiM sample_type
-              CASE
-                WHEN ${samples.sample_type} IS NOT NULL THEN
-                  CASE ${samples.sample_type}
-                    WHEN 'blood' THEN 2
-                    WHEN 'mouth_swab' THEN 1
-                    WHEN 'head_hair' THEN 2
-                    WHEN 'body_hair' THEN 2
-                    ELSE 1
-                  END
-                -- Sugar: preferred_sample
-                WHEN ${tests.preferred_sample} IS NOT NULL THEN
-                  CASE LOWER(${tests.preferred_sample})
-                    WHEN 'blood' THEN 2
-                    WHEN 'body_hair' THEN 2
-                    WHEN 'head hair' THEN 2
-                    WHEN 'head_hair' THEN 2
-                    WHEN 'veni_blood_sample' THEN 2
-                    ELSE 1
-                  END
-                -- Sugar: test_required
-                WHEN ${tests.test_required} IS NOT NULL THEN
-                  (
-                    IF(REGEXP_CONTAINS(LOWER(${tests.test_required}), r'peth'), 2, 0) +
-                    IF(REGEXP_CONTAINS(LOWER(${tests.test_required}), r'fbc'), 2, 0) +
-                    IF(REGEXP_CONTAINS(LOWER(${tests.test_required}), r'cdt'), 2, 0) +
-                    IF(REGEXP_CONTAINS(LOWER(${tests.test_required}), r'lft'), 2, 0) +
-                    IF(REGEXP_CONTAINS(LOWER(${tests.test_required}), r'etg'), 2, 0) +
-                    IF(REGEXP_CONTAINS(LOWER(${tests.test_required}), r'faee'), 2, 0)
-                  )
-                ELSE 0
-              END
-            ELSE 0
-          END
+
+  dimension: has_hair_colour_info {
+    label: "Has Hair Colour Info"
+    type: yesno
+    sql: ${TABLE}.has_hair_colour_info ;;
+  }
+
+
+
+  dimension: has_hair_treatment_info {
+    label: "Has Hair Treatment Info"
+    type: yesno
+    sql: ${TABLE}.has_hair_treatment_info ;;
+  }
+
+  dimension: court_date_or_message {
+    label: "Court Date (or Message)"
+    type: string
+    sql: CASE
+          WHEN ${court_date} IS NULL THEN 'Court Date not needed for this case'
+          ELSE FORMAT_DATE('%Y-%m-%d', ${court_date})
+        END ;;
+  }
+
+
+
+  measure: percent_with_valid_hair_colour {
+    type: number
+    value_format_name: percent_1
+    label: "% with Hair Colour Info"
+    sql: SAFE_DIVIDE(
+          SUM(CASE WHEN ${has_hair_colour_info} THEN 1 ELSE 0 END),
+          COUNT(*)
+       ) ;;
+    group_label: "Hair Info Coverage"
+  }
+
+  measure: percent_with_valid_hair_treatment {
+    type: number
+    value_format_name: percent_1
+    label: "% with Hair Treatment Info"
+    sql: SAFE_DIVIDE(
+          SUM(CASE WHEN ${has_hair_treatment_info} THEN 1 ELSE 0 END),
+          COUNT(*)
+       ) ;;
+    group_label: "Hair Info Coverage"
+  }
+
+  measure: count_booking_appointments {
+    type: sum
+    label: "Booking Appointments"
+    value_format_name: decimal_0
+    sql: CASE WHEN ${status} = 'Booking Appointments' THEN 1 ELSE NULL END ;;
+  }
+
+  measure: count_appointment_booked {
+    type: sum
+    label: "Appointment Booked"
+    value_format_name: decimal_0
+    sql: CASE WHEN ${status} = 'Appointment Booked' THEN 1 ELSE NULL END ;;
+  }
+
+
+  measure: count_awaiting_samples {
+    type: sum
+    label: "Awaiting Samples"
+    value_format_name: decimal_0
+    sql: CASE WHEN ${status} = 'Awaiting Samples' THEN 1 ELSE NULL END ;;
+  }
+
+  measure: count_testing_underway {
+    type: sum
+    label: "Testing Underway"
+    value_format_name: decimal_0
+    sql: CASE WHEN ${status} = 'Testing Underway' THEN 1 ELSE 0 END ;;
+  }
+
+  measure: count_testing_completed {
+    type: sum
+    label: "Testing Completed"
+    value_format_name: decimal_0
+    sql: CASE when ${status} = 'Testing Completed' then 1 else 0 end ;;
+  }
+
+  measure: count_case_completed {
+    type:  sum
+    label: "Case Completed"
+    value_format_name: decimal_0
+    sql: case when ${status} = 'Case Completed' then 1 else 0 end;;
+  }
+
+  measure: count_case_completed_last_30_days {
+    type: sum
+    label: "Case Completed (Last 30 Days)"
+    value_format_name: decimal_0
+    sql: CASE
+          WHEN ${status} = 'Case Completed'
+          AND ${completed_raw} >= TIMESTAMP(DATE_SUB(CURRENT_DATE(), INTERVAL 30 DAY))
+          THEN 1
+          ELSE 0
+        END ;;
+  }
+
+  measure: count_on_hold {
+    type: sum
+    label: "On Hold"
+    value_format_name: decimal_0
+    sql: case when ${status} = 'On Hold' then 1 else 0 end;;
+  }
+
+  measure: count_not_proceeding {
+    type: sum
+    label: "Not Proceding"
+    value_format_name: decimal_0
+    sql: case when ${status} = 'Not Proceeding' then 1 else 0 end  ;;
+  }
+
+  measure: count_case_contact_closure {
+    type: sum
+    label: "Case Contact Closure"
+    value_format_name: decimal_0
+    sql: case when ${status} = 'Case Contact Closure' then 1 else 0 end ;;
+  }
+
+  measure: percent_case_completed_last_30_days_vs_year {
+    label: "% Case Completed (Last 30 Days vs This Year)"
+    type: number
+    value_format_name: percent_1
+
+    sql: SAFE_DIVIDE(
+          SUM(
+            CASE
+              WHEN ${status} = 'Case Completed'
+                AND EXTRACT(DATE FROM ${completed_raw}) BETWEEN DATE_SUB(CURRENT_DATE(), INTERVAL 30 DAY) AND CURRENT_DATE()
+              THEN 1
+              ELSE 0
+            END
+          ),
+          SUM(
+            CASE
+              WHEN ${status} = 'Case Completed'
+                AND EXTRACT(YEAR FROM ${completed_raw}) = EXTRACT(YEAR FROM CURRENT_DATE())
+              THEN 1
+              ELSE 0
+            END
+          )
+        ) ;;
+  }
+  measure: count_appointment_booked_last_30_days {
+    type: sum
+    label: "Appointments Booked (Last 30 Days)"
+    value_format_name: decimal_0
+    sql: CASE
+          WHEN ${status} = 'Appointment Booked'
+           AND ${created_raw} >= TIMESTAMP(DATE_SUB(CURRENT_DATE(), INTERVAL 30 DAY))
+          THEN 1 ELSE 0
+        END ;;
+  }
+
+  measure: percent_appointment_booked_30_day_vs_total {
+    type: number
+    label: "% Appointments Booked (30 Days vs Total)"
+    value_format_name: percent_1
+    sql: SAFE_DIVIDE(
+          ${count_appointment_booked_last_30_days},
+          ${count_appointment_booked}
         ) ;;
   }
 
-  measure: samples_collected_this_year_weighted {
-    label: "Samples Collected (This Year – Weighted)"
-    type: number
+
+  measure: count_appointment_booked_this_year {
+    type: sum
+    label: "Appointments Booked (This Year)"
     value_format_name: decimal_0
-
-    sql: SUM(
-          CASE
-            WHEN EXTRACT(YEAR FROM ${appointments.appointment_held_raw}) = EXTRACT(YEAR FROM CURRENT_DATE())
-            THEN
-              -- MiM sample_type logic
-              CASE
-                WHEN ${samples.sample_type} IS NOT NULL THEN
-                  CASE ${samples.sample_type}
-                    WHEN 'blood' THEN 2
-                    WHEN 'mouth_swab' THEN 1
-                    WHEN 'head_hair' THEN 2
-                    WHEN 'body_hair' THEN 2
-                    ELSE 1
-                  END
-
-      -- Sugar: preferred_sample logic
-      WHEN ${tests.preferred_sample} IS NOT NULL THEN
-      CASE LOWER(${tests.preferred_sample})
-      WHEN 'blood' THEN 2
-      WHEN 'body_hair' THEN 2
-      WHEN 'head hair' THEN 2
-      WHEN 'head_hair' THEN 2
-      WHEN 'veni_blood_sample' THEN 2
-      ELSE 1
-      END
-
-      -- Sugar: test_required logic
-      WHEN ${tests.test_required} IS NOT NULL THEN
-      (
-      IF(REGEXP_CONTAINS(LOWER(${tests.test_required}), r'peth'), 2, 0) +
-      IF(REGEXP_CONTAINS(LOWER(${tests.test_required}), r'fbc'), 2, 0) +
-      IF(REGEXP_CONTAINS(LOWER(${tests.test_required}), r'cdt'), 2, 0) +
-      IF(REGEXP_CONTAINS(LOWER(${tests.test_required}), r'lft'), 2, 0) +
-      IF(REGEXP_CONTAINS(LOWER(${tests.test_required}), r'etg'), 2, 0) +
-      IF(REGEXP_CONTAINS(LOWER(${tests.test_required}), r'faee'), 2, 0)
-      )
-      ELSE 0
-      END
-      ELSE 0
-      END
-      ) ;;
+    sql: CASE
+          WHEN ${status} = 'Appointment Booked'
+           AND EXTRACT(YEAR FROM ${created_raw}) = EXTRACT(YEAR FROM CURRENT_DATE())
+          THEN 1 ELSE 0
+        END ;;
   }
 
-  measure: samples_collected_4_weeks_ago_weighted {
-    label: "Samples Collected (4 Weeks Ago – Weighted)"
-    type: number
-    value_format_name: decimal_0
 
-    sql: SUM(
-          CASE
-            WHEN DATE_TRUNC(DATE(${appointments.appointment_held_raw}), WEEK(MONDAY))
-                 = DATE_SUB(DATE_TRUNC(CURRENT_DATE(), WEEK(MONDAY)), INTERVAL 4 WEEK)
-            THEN
-              CASE
-                WHEN ${samples.sample_type} IS NOT NULL THEN
-                  CASE ${samples.sample_type}
-                    WHEN 'blood' THEN 2
-                    WHEN 'mouth_swab' THEN 1
-                    WHEN 'head_hair' THEN 2
-                    WHEN 'body_hair' THEN 2
-                    ELSE 1
-                  END
-                WHEN ${tests.preferred_sample} IS NOT NULL THEN
-                  CASE LOWER(${tests.preferred_sample})
-                    WHEN 'blood' THEN 2
-                    WHEN 'body_hair' THEN 2
-                    WHEN 'head hair' THEN 2
-                    WHEN 'head_hair' THEN 2
-                    WHEN 'veni_blood_sample' THEN 2
-                    ELSE 1
-                  END
-                WHEN ${tests.test_required} IS NOT NULL THEN
-                  (
-                    IF(REGEXP_CONTAINS(LOWER(${tests.test_required}), r'peth'), 2, 0) +
-                    IF(REGEXP_CONTAINS(LOWER(${tests.test_required}), r'fbc'), 2, 0) +
-                    IF(REGEXP_CONTAINS(LOWER(${tests.test_required}), r'cdt'), 2, 0) +
-                    IF(REGEXP_CONTAINS(LOWER(${tests.test_required}), r'lft'), 2, 0) +
-                    IF(REGEXP_CONTAINS(LOWER(${tests.test_required}), r'etg'), 2, 0) +
-                    IF(REGEXP_CONTAINS(LOWER(${tests.test_required}), r'faee'), 2, 0)
-                  )
-                ELSE 0
-              END
-            ELSE 0
-          END
+
+  measure: percent_appointment_booked_30_day_vs_year {
+    type: number
+    label: "% Appointments Booked (30 Days vs This Year)"
+    value_format_name: percent_1
+    sql: SAFE_DIVIDE(
+          ${count_appointment_booked_last_30_days},
+          ${count_appointment_booked_this_year}
+
         ) ;;
+      drill_fields: [id, created_raw]
   }
-  measure: samples_collected_3_weeks_ago_weighted {
-    label: "Samples Collected (3 Weeks Ago – Weighted)"
-    type: number
-    value_format_name: decimal_0
 
-    sql: SUM(
-          CASE
-            WHEN DATE_TRUNC(DATE(${appointments.appointment_held_raw}), WEEK(MONDAY))
-                 = DATE_SUB(DATE_TRUNC(CURRENT_DATE(), WEEK(MONDAY)), INTERVAL 3 WEEK)
-            THEN
-              CASE
-                WHEN ${samples.sample_type} IS NOT NULL THEN
-                  CASE ${samples.sample_type}
-                    WHEN 'blood' THEN 2
-                    WHEN 'mouth_swab' THEN 1
-                    WHEN 'head_hair' THEN 2
-                    WHEN 'body_hair' THEN 2
-                    ELSE 1
-                  END
-                WHEN ${tests.preferred_sample} IS NOT NULL THEN
-                  CASE LOWER(${tests.preferred_sample})
-                    WHEN 'blood' THEN 2
-                    WHEN 'body_hair' THEN 2
-                    WHEN 'head hair' THEN 2
-                    WHEN 'head_hair' THEN 2
-                    WHEN 'veni_blood_sample' THEN 2
-                    ELSE 1
-                  END
-                WHEN ${tests.test_required} IS NOT NULL THEN
-                  (
-                    IF(REGEXP_CONTAINS(LOWER(${tests.test_required}), r'peth'), 2, 0) +
-                    IF(REGEXP_CONTAINS(LOWER(${tests.test_required}), r'fbc'), 2, 0) +
-                    IF(REGEXP_CONTAINS(LOWER(${tests.test_required}), r'cdt'), 2, 0) +
-                    IF(REGEXP_CONTAINS(LOWER(${tests.test_required}), r'lft'), 2, 0) +
-                    IF(REGEXP_CONTAINS(LOWER(${tests.test_required}), r'etg'), 2, 0) +
-                    IF(REGEXP_CONTAINS(LOWER(${tests.test_required}), r'faee'), 2, 0)
-                  )
-                ELSE 0
-              END
-            ELSE 0
-          END
-        ) ;;
+  measure: count_appointment_booked_this_month {
+    type: sum
+    label: "Appointments Booked (This Month)"
+    value_format_name: decimal_0
+    sql: CASE
+          WHEN ${status} = 'Appointment Booked'
+           AND EXTRACT(YEAR FROM ${created_raw}) = EXTRACT(YEAR FROM CURRENT_DATE())
+           AND EXTRACT(MONTH FROM ${created_raw}) = EXTRACT(MONTH FROM CURRENT_DATE())
+          THEN 1 ELSE 0
+        END ;;
   }
-  measure: samples_collected_2_weeks_ago_weighted {
-    label: "Samples Collected (2 Weeks Ago – Weighted)"
-    type: number
-    value_format_name: decimal_0
 
-    sql: SUM(
-          CASE
-            WHEN DATE_TRUNC(DATE(${appointments.appointment_held_raw}), WEEK(MONDAY))
-                 = DATE_SUB(DATE_TRUNC(CURRENT_DATE(), WEEK(MONDAY)), INTERVAL 2 WEEK)
-            THEN
-              CASE
-                WHEN ${samples.sample_type} IS NOT NULL THEN
-                  CASE ${samples.sample_type}
-                    WHEN 'blood' THEN 2
-                    WHEN 'mouth_swab' THEN 1
-                    WHEN 'head_hair' THEN 2
-                    WHEN 'body_hair' THEN 2
-                    ELSE 1
-                  END
-                WHEN ${tests.preferred_sample} IS NOT NULL THEN
-                  CASE LOWER(${tests.preferred_sample})
-                    WHEN 'blood' THEN 2
-                    WHEN 'body_hair' THEN 2
-                    WHEN 'head hair' THEN 2
-                    WHEN 'head_hair' THEN 2
-                    WHEN 'veni_blood_sample' THEN 2
-                    ELSE 1
-                  END
-                WHEN ${tests.test_required} IS NOT NULL THEN
-                  (
-                    IF(REGEXP_CONTAINS(LOWER(${tests.test_required}), r'peth'), 2, 0) +
-                    IF(REGEXP_CONTAINS(LOWER(${tests.test_required}), r'fbc'), 2, 0) +
-                    IF(REGEXP_CONTAINS(LOWER(${tests.test_required}), r'cdt'), 2, 0) +
-                    IF(REGEXP_CONTAINS(LOWER(${tests.test_required}), r'lft'), 2, 0) +
-                    IF(REGEXP_CONTAINS(LOWER(${tests.test_required}), r'etg'), 2, 0) +
-                    IF(REGEXP_CONTAINS(LOWER(${tests.test_required}), r'faee'), 2, 0)
-                  )
-                ELSE 0
-              END
-            ELSE 0
-          END
-        ) ;;
-  }
-  measure: samples_collected_last_week_weighted {
-    label: "Samples Collected (Last Week – Weighted)"
+  measure: percent_appointment_booked_month_vs_year {
     type: number
-    value_format_name: decimal_0
-
-    sql: SUM(
-          CASE
-            WHEN DATE_TRUNC(DATE(${appointments.appointment_held_raw}), WEEK(MONDAY))
-                 = DATE_SUB(DATE_TRUNC(CURRENT_DATE(), WEEK(MONDAY)), INTERVAL 1 WEEK)
-            THEN
-              CASE
-                WHEN ${samples.sample_type} IS NOT NULL THEN
-                  CASE ${samples.sample_type}
-                    WHEN 'blood' THEN 2
-                    WHEN 'mouth_swab' THEN 1
-                    WHEN 'head_hair' THEN 2
-                    WHEN 'body_hair' THEN 2
-                    ELSE 1
-                  END
-                WHEN ${tests.preferred_sample} IS NOT NULL THEN
-                  CASE LOWER(${tests.preferred_sample})
-                    WHEN 'blood' THEN 2
-                    WHEN 'body_hair' THEN 2
-                    WHEN 'head hair' THEN 2
-                    WHEN 'head_hair' THEN 2
-                    WHEN 'veni_blood_sample' THEN 2
-                    ELSE 1
-                  END
-                WHEN ${tests.test_required} IS NOT NULL THEN
-                  (
-                    IF(REGEXP_CONTAINS(LOWER(${tests.test_required}), r'peth'), 2, 0) +
-                    IF(REGEXP_CONTAINS(LOWER(${tests.test_required}), r'fbc'), 2, 0) +
-                    IF(REGEXP_CONTAINS(LOWER(${tests.test_required}), r'cdt'), 2, 0) +
-                    IF(REGEXP_CONTAINS(LOWER(${tests.test_required}), r'lft'), 2, 0) +
-                    IF(REGEXP_CONTAINS(LOWER(${tests.test_required}), r'etg'), 2, 0) +
-                    IF(REGEXP_CONTAINS(LOWER(${tests.test_required}), r'faee'), 2, 0)
-                  )
-                ELSE 0
-              END
-            ELSE 0
-          END
+    label: "% Appointments Booked (This Month vs This Year)"
+    value_format_name: percent_1
+    sql: SAFE_DIVIDE(
+          ${count_appointment_booked_this_month},
+          ${count_appointment_booked_this_year}
         ) ;;
   }
 
-  measure: samples_collected_rolling_30_days_weighted {
-    label: "Samples Collected (Rolling 30 Days – Weighted)"
-    type: number
-    value_format_name: decimal_0
-
-    sql: SUM(
-          CASE
-            WHEN DATE(${appointments.appointment_held_raw}) >= DATE_SUB(CURRENT_DATE(), INTERVAL 30 DAY)
-            THEN
-              CASE
-                WHEN ${samples.sample_type} IS NOT NULL THEN
-                  CASE ${samples.sample_type}
-                    WHEN 'blood' THEN 2
-                    WHEN 'mouth_swab' THEN 1
-                    WHEN 'head_hair' THEN 2
-                    WHEN 'body_hair' THEN 2
-                    ELSE 1
-                  END
-                WHEN ${tests.preferred_sample} IS NOT NULL THEN
-                  CASE LOWER(${tests.preferred_sample})
-                    WHEN 'blood' THEN 2
-                    WHEN 'body_hair' THEN 2
-                    WHEN 'head hair' THEN 2
-                    WHEN 'head_hair' THEN 2
-                    WHEN 'veni_blood_sample' THEN 2
-                    ELSE 1
-                  END
-                WHEN ${tests.test_required} IS NOT NULL THEN
-                  (
-                    IF(REGEXP_CONTAINS(LOWER(${tests.test_required}), r'peth'), 2, 0) +
-                    IF(REGEXP_CONTAINS(LOWER(${tests.test_required}), r'fbc'), 2, 0) +
-                    IF(REGEXP_CONTAINS(LOWER(${tests.test_required}), r'cdt'), 2, 0) +
-                    IF(REGEXP_CONTAINS(LOWER(${tests.test_required}), r'lft'), 2, 0) +
-                    IF(REGEXP_CONTAINS(LOWER(${tests.test_required}), r'etg'), 2, 0) +
-                    IF(REGEXP_CONTAINS(LOWER(${tests.test_required}), r'faee'), 2, 0)
-                  )
-                ELSE 0
-              END
-            ELSE 0
-          END
-        ) ;;
-  }
-
-  measure: samples_collected_this_week_weighted {
-    label: "Samples Collected (This Week – Weighted)"
-    type: number
-    value_format_name: decimal_0
-
-    sql: SUM(
-          CASE
-            WHEN EXTRACT(ISOWEEK FROM DATE(${appointments.appointment_held_raw})) = EXTRACT(ISOWEEK FROM CURRENT_DATE())
-              AND EXTRACT(YEAR FROM DATE(${appointments.appointment_held_raw})) = EXTRACT(YEAR FROM CURRENT_DATE())
-            THEN
-              CASE
-                WHEN ${samples.sample_type} IS NOT NULL THEN
-                  CASE ${samples.sample_type}
-                    WHEN 'blood' THEN 2
-                    WHEN 'mouth_swab' THEN 1
-                    WHEN 'head_hair' THEN 2
-                    WHEN 'body_hair' THEN 2
-                    ELSE 1
-                  END
-                WHEN ${tests.preferred_sample} IS NOT NULL THEN
-                  CASE LOWER(${tests.preferred_sample})
-                    WHEN 'blood' THEN 2
-                    WHEN 'body_hair' THEN 2
-                    WHEN 'head hair' THEN 2
-                    WHEN 'head_hair' THEN 2
-                    WHEN 'veni_blood_sample' THEN 2
-                    ELSE 1
-                  END
-                WHEN ${tests.test_required} IS NOT NULL THEN
-                  (
-                    IF(REGEXP_CONTAINS(LOWER(${tests.test_required}), r'peth'), 2, 0) +
-                    IF(REGEXP_CONTAINS(LOWER(${tests.test_required}), r'fbc'), 2, 0) +
-                    IF(REGEXP_CONTAINS(LOWER(${tests.test_required}), r'cdt'), 2, 0) +
-                    IF(REGEXP_CONTAINS(LOWER(${tests.test_required}), r'lft'), 2, 0) +
-                    IF(REGEXP_CONTAINS(LOWER(${tests.test_required}), r'etg'), 2, 0) +
-                    IF(REGEXP_CONTAINS(LOWER(${tests.test_required}), r'faee'), 2, 0)
-                  )
-                ELSE 0
-              END
-            ELSE 0
-          END
-        ) ;;
-  }
-  measure: samples_collected_3_months_ago_weighted {
-    label: "Samples Collected (3 Months Ago – Weighted)"
-    type: number
-    value_format_name: decimal_0
-
-    sql: SUM(
-          CASE
-            WHEN EXTRACT(YEAR FROM DATE(${appointments.appointment_held_raw})) = EXTRACT(YEAR FROM DATE_SUB(CURRENT_DATE(), INTERVAL 3 MONTH))
-              AND EXTRACT(MONTH FROM DATE(${appointments.appointment_held_raw})) = EXTRACT(MONTH FROM DATE_SUB(CURRENT_DATE(), INTERVAL 3 MONTH))
-            THEN
-              CASE
-                WHEN ${samples.sample_type} IS NOT NULL THEN
-                  CASE ${samples.sample_type}
-                    WHEN 'blood' THEN 2
-                    WHEN 'mouth_swab' THEN 1
-                    WHEN 'head_hair' THEN 2
-                    WHEN 'body_hair' THEN 2
-                    ELSE 1
-                  END
-                WHEN ${tests.preferred_sample} IS NOT NULL THEN
-                  CASE LOWER(${tests.preferred_sample})
-                    WHEN 'blood' THEN 2
-                    WHEN 'body_hair' THEN 2
-                    WHEN 'head hair' THEN 2
-                    WHEN 'head_hair' THEN 2
-                    WHEN 'veni_blood_sample' THEN 2
-                    ELSE 1
-                  END
-                WHEN ${tests.test_required} IS NOT NULL THEN
-                  (
-                    IF(REGEXP_CONTAINS(LOWER(${tests.test_required}), r'peth'), 2, 0) +
-                    IF(REGEXP_CONTAINS(LOWER(${tests.test_required}), r'fbc'), 2, 0) +
-                    IF(REGEXP_CONTAINS(LOWER(${tests.test_required}), r'cdt'), 2, 0) +
-                    IF(REGEXP_CONTAINS(LOWER(${tests.test_required}), r'lft'), 2, 0) +
-                    IF(REGEXP_CONTAINS(LOWER(${tests.test_required}), r'etg'), 2, 0) +
-                    IF(REGEXP_CONTAINS(LOWER(${tests.test_required}), r'faee'), 2, 0)
-                  )
-                ELSE 0
-              END
-            ELSE 0
-          END
-        ) ;;
-  }
-
-  measure: samples_collected_2_months_ago_weighted {
-    label: "Samples Collected (2 Months Ago – Weighted)"
-    type: number
-    value_format_name: decimal_0
-
-    sql: SUM(
-          CASE
-            WHEN EXTRACT(YEAR FROM DATE(${appointments.appointment_held_raw})) = EXTRACT(YEAR FROM DATE_SUB(CURRENT_DATE(), INTERVAL 2 MONTH))
-              AND EXTRACT(MONTH FROM DATE(${appointments.appointment_held_raw})) = EXTRACT(MONTH FROM DATE_SUB(CURRENT_DATE(), INTERVAL 2 MONTH))
-            THEN
-              CASE
-                WHEN ${samples.sample_type} IS NOT NULL THEN
-                  CASE ${samples.sample_type}
-                    WHEN 'blood' THEN 2
-                    WHEN 'mouth_swab' THEN 1
-                    WHEN 'head_hair' THEN 2
-                    WHEN 'body_hair' THEN 2
-                    ELSE 1
-                  END
-                WHEN ${tests.preferred_sample} IS NOT NULL THEN
-                  CASE LOWER(${tests.preferred_sample})
-                    WHEN 'blood' THEN 2
-                    WHEN 'body_hair' THEN 2
-                    WHEN 'head hair' THEN 2
-                    WHEN 'head_hair' THEN 2
-                    WHEN 'veni_blood_sample' THEN 2
-                    ELSE 1
-                  END
-                WHEN ${tests.test_required} IS NOT NULL THEN
-                  (
-                    IF(REGEXP_CONTAINS(LOWER(${tests.test_required}), r'peth'), 2, 0) +
-                    IF(REGEXP_CONTAINS(LOWER(${tests.test_required}), r'fbc'), 2, 0) +
-                    IF(REGEXP_CONTAINS(LOWER(${tests.test_required}), r'cdt'), 2, 0) +
-                    IF(REGEXP_CONTAINS(LOWER(${tests.test_required}), r'lft'), 2, 0) +
-                    IF(REGEXP_CONTAINS(LOWER(${tests.test_required}), r'etg'), 2, 0) +
-                    IF(REGEXP_CONTAINS(LOWER(${tests.test_required}), r'faee'), 2, 0)
-                  )
-                ELSE 0
-              END
-            ELSE 0
-          END
-        ) ;;
-  }
-
-  measure: samples_collected_last_month_weighted {
-    label: "Samples Collected (Last Month – Weighted)"
-    type: number
-    value_format_name: decimal_0
-
-    sql: SUM(
-          CASE
-            WHEN EXTRACT(YEAR FROM DATE(${appointments.appointment_held_raw})) = EXTRACT(YEAR FROM DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH))
-              AND EXTRACT(MONTH FROM DATE(${appointments.appointment_held_raw})) = EXTRACT(MONTH FROM DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH))
-            THEN
-              CASE
-                WHEN ${samples.sample_type} IS NOT NULL THEN
-                  CASE ${samples.sample_type}
-                    WHEN 'blood' THEN 2
-                    WHEN 'mouth_swab' THEN 1
-                    WHEN 'head_hair' THEN 2
-                    WHEN 'body_hair' THEN 2
-                    ELSE 1
-                  END
-                WHEN ${tests.preferred_sample} IS NOT NULL THEN
-                  CASE LOWER(${tests.preferred_sample})
-                    WHEN 'blood' THEN 2
-                    WHEN 'body_hair' THEN 2
-                    WHEN 'head hair' THEN 2
-                    WHEN 'head_hair' THEN 2
-                    WHEN 'veni_blood_sample' THEN 2
-                    ELSE 1
-                  END
-                WHEN ${tests.test_required} IS NOT NULL THEN
-                  (
-                    IF(REGEXP_CONTAINS(LOWER(${tests.test_required}), r'peth'), 2, 0) +
-                    IF(REGEXP_CONTAINS(LOWER(${tests.test_required}), r'fbc'), 2, 0) +
-                    IF(REGEXP_CONTAINS(LOWER(${tests.test_required}), r'cdt'), 2, 0) +
-                    IF(REGEXP_CONTAINS(LOWER(${tests.test_required}), r'lft'), 2, 0) +
-                    IF(REGEXP_CONTAINS(LOWER(${tests.test_required}), r'etg'), 2, 0) +
-                    IF(REGEXP_CONTAINS(LOWER(${tests.test_required}), r'faee'), 2, 0)
-                  )
-                ELSE 0
-              END
-            ELSE 0
-          END
-        ) ;;
-  }
-
-  measure: samples_collected_this_month_weighted {
-    label: "Samples Collected (This Month – Weighted)"
-    type: number
-    value_format_name: decimal_0
-
-    sql: SUM(
-          CASE
-            WHEN EXTRACT(YEAR FROM DATE(${appointments.appointment_held_raw})) = EXTRACT(YEAR FROM CURRENT_DATE())
-              AND EXTRACT(MONTH FROM DATE(${appointments.appointment_held_raw})) = EXTRACT(MONTH FROM CURRENT_DATE())
-            THEN
-              CASE
-                WHEN ${samples.sample_type} IS NOT NULL THEN
-                  CASE ${samples.sample_type}
-                    WHEN 'blood' THEN 2
-                    WHEN 'mouth_swab' THEN 1
-                    WHEN 'head_hair' THEN 2
-                    WHEN 'body_hair' THEN 2
-                    ELSE 1
-                  END
-                WHEN ${tests.preferred_sample} IS NOT NULL THEN
-                  CASE LOWER(${tests.preferred_sample})
-                    WHEN 'blood' THEN 2
-                    WHEN 'body_hair' THEN 2
-                    WHEN 'head hair' THEN 2
-                    WHEN 'head_hair' THEN 2
-                    WHEN 'veni_blood_sample' THEN 2
-                    ELSE 1
-                  END
-                WHEN ${tests.test_required} IS NOT NULL THEN
-                  (
-                    IF(REGEXP_CONTAINS(LOWER(${tests.test_required}), r'peth'), 2, 0) +
-                    IF(REGEXP_CONTAINS(LOWER(${tests.test_required}), r'fbc'), 2, 0) +
-                    IF(REGEXP_CONTAINS(LOWER(${tests.test_required}), r'cdt'), 2, 0) +
-                    IF(REGEXP_CONTAINS(LOWER(${tests.test_required}), r'lft'), 2, 0) +
-                    IF(REGEXP_CONTAINS(LOWER(${tests.test_required}), r'etg'), 2, 0) +
-                    IF(REGEXP_CONTAINS(LOWER(${tests.test_required}), r'faee'), 2, 0)
-                  )
-                ELSE 0
-              END
-            ELSE 0
-          END
-        ) ;;
-  }
-
-  measure: samples_scheduled_next_week_weighted {
-    label: "Samples Scheduled (Next Week – Weighted)"
-    type: number
-    value_format_name: decimal_0
-
-    sql: SUM(
-          CASE
-            WHEN DATE(${appointments.appointment_held_raw}) >= DATE_ADD(CURRENT_DATE(), INTERVAL 1 WEEK)
-              AND DATE(${appointments.appointment_held_raw}) < DATE_ADD(CURRENT_DATE(), INTERVAL 2 WEEK)
-            THEN
-              CASE
-                WHEN ${samples.sample_type} IS NOT NULL THEN
-                  CASE ${samples.sample_type}
-                    WHEN 'blood' THEN 2
-                    WHEN 'mouth_swab' THEN 1
-                    WHEN 'head_hair' THEN 2
-                    WHEN 'body_hair' THEN 2
-                    ELSE 1
-                  END
-                WHEN ${tests.preferred_sample} IS NOT NULL THEN
-                  CASE LOWER(${tests.preferred_sample})
-                    WHEN 'blood' THEN 2
-                    WHEN 'body_hair' THEN 2
-                    WHEN 'head hair' THEN 2
-                    WHEN 'head_hair' THEN 2
-                    WHEN 'veni_blood_sample' THEN 2
-                    ELSE 1
-                  END
-                WHEN ${tests.test_required} IS NOT NULL THEN
-                  (
-                    IF(REGEXP_CONTAINS(LOWER(${tests.test_required}), r'peth'), 2, 0) +
-                    IF(REGEXP_CONTAINS(LOWER(${tests.test_required}), r'fbc'), 2, 0) +
-                    IF(REGEXP_CONTAINS(LOWER(${tests.test_required}), r'cdt'), 2, 0) +
-                    IF(REGEXP_CONTAINS(LOWER(${tests.test_required}), r'lft'), 2, 0) +
-                    IF(REGEXP_CONTAINS(LOWER(${tests.test_required}), r'etg'), 2, 0) +
-                    IF(REGEXP_CONTAINS(LOWER(${tests.test_required}), r'faee'), 2, 0)
-                  )
-                ELSE 0
-              END
-            ELSE 0
-          END
-        ) ;;
-  }
 }
