@@ -1,45 +1,137 @@
-# Next Dash  - Operations
+view: collectors {
+  sql_table_name: `dna-legal-central-data.case_mart.collectors` ;;
+  drill_fields: [id]
 
-explore: operations_performance {
-  label: "Operations Performance"
-  description: "Explore focused on tracking case lifecycle and operational KPIs (e.g. booking, lab, reporting stages)."
-  view_name: cases_operations
 
-  join: appointments {
-    type: left_outer
-    sql_on: ${cases_operations.id} = ${appointments.case_id} ;;
-    relationship: one_to_many
+  dimension: id {
+    primary_key: yes
+    type: string
+    sql: ${TABLE}.id ;;
   }
-
-  #  Pre-join for later steps
-  join: tests {
-    type: left_outer
-    sql_on: ${cases_operations.id} = ${tests.parent_id} ;;
-    relationship: one_to_many
+  dimension: active {
+    type: number
+    sql:${TABLE}.active;;
   }
-
-  join: samples {
-    type: left_outer
-    sql_on: ${cases_operations.id} = ${samples.case_id} ;;
-    relationship: one_to_many
+  dimension: contract_type {
+    type: string
+    sql: ${TABLE}.contract_type ;;
   }
-
-  join: drug_alcohol_results {
-    type: left_outer
-    sql_on: ${tests.id} = ${drug_alcohol_results.test_id} ;;
-    relationship: one_to_many
+  dimension_group: created {
+    type: time
+    timeframes: [raw, time, date, week, month, quarter, year]
+    sql: ${TABLE}.created_at ;;
   }
-
-  join: mim_samples {
-    type: left_outer
-    sql_on: ${cases_operations.id} = ${mim_samples.case_id} ;;
-    relationship: one_to_many
+  dimension: first_name {
+    hidden: yes
+    type: string
+    sql: ${TABLE}.first_name ;;
   }
-
-  join: users {
-    view_label: "User"
-    type: left_outer
-    relationship: many_to_one
-    sql_on: ${cases_operations.sales_person_id} = ${users.id} ;;
+  dimension: last_name {
+    hidden: yes
+    type: string
+    sql: ${TABLE}.last_name ;;
   }
+  dimension: full_name {
+    type: string
+    sql: CONCAT(${first_name}, " ", ${last_name}) ;;
   }
+  dimension: working_info {
+    type: string
+    sql: ${TABLE}.working_info ;;
+  }
+  dimension: blood_collections {
+    type: string
+    sql: ${TABLE}.blood_collections ;;
+  }
+  dimension: training_state {
+    type: string
+    sql: ${TABLE}.training_state ;;
+  }
+  dimension: location_address_city {
+    hidden: yes
+    type: string
+    sql: ${TABLE}.location_address_city ;;
+  }
+  dimension: location_address_country {
+    hidden: yes
+    type: string
+    sql: ${TABLE}.location_address_country ;;
+  }
+  dimension: location_address_postcode {
+    hidden: yes
+    type: string
+    sql: ${TABLE}.location_address_postcode ;;
+  }
+  dimension: location_address_state {
+    hidden: yes
+    type: string
+    sql: ${TABLE}.location_address_state ;;
+  }
+  dimension: location_address_street {
+    hidden: yes
+    type: string
+    sql: ${TABLE}.location_address_street ;;
+  }
+  dimension: shipping_address_city {
+    hidden: yes
+    type: string
+    sql: ${TABLE}.shipping_address_city ;;
+  }
+  dimension: shipping_address_country {
+    hidden: yes
+    type: string
+    sql: ${TABLE}.shipping_address_country ;;
+  }
+  dimension: shipping_address_postcode {
+    hidden: yes
+    type: string
+    sql: ${TABLE}.shipping_address_postcode ;;
+  }
+  dimension: shipping_address_state {
+    hidden: yes
+    type: string
+    sql: ${TABLE}.shipping_address_state ;;
+  }
+  dimension: shipping_address_street {
+    hidden: yes
+    type: string
+    sql: ${TABLE}.shipping_address_street ;;
+  }
+  dimension: source {
+    type: string
+    sql: ${TABLE}.source ;;
+  }
+  dimension: type {
+    hidden: yes
+    description: "e.g Private_Nurse, Private_Doctor, Certified Collector"
+    type: string
+    sql: ${TABLE}.type ;;
+  }
+  dimension_group: updated {
+    hidden:  yes
+    type: time
+    timeframes: [raw, time, date, week, month, quarter, year]
+    sql: ${TABLE}.updated_at ;;
+  }
+  dimension: user_id {
+    hidden:  yes
+    type: string
+    sql: ${TABLE}.user_id ;;
+  }
+  dimension: appointment_fee {
+    type: number
+    sql: ${TABLE}.appointment_fee ;;
+  }
+  dimension: venipuncture_fee {
+    type: number
+    sql: ${TABLE}.venipuncture_fee ;;
+  }
+  dimension: cost_per_working_day {
+    type: number
+    sql: ${TABLE}.cost_per_working_day ;;
+  }
+  measure: count {
+    type: count
+    drill_fields: [id, first_name, last_name]
+  }
+}
