@@ -1,112 +1,143 @@
 # -----------------------------
-# BOOKINGS — COUNTS & PERCENTS
+# CANCELLATIONS — WEEKENDS
 # -----------------------------
 
-# All Time (distinct IDs where booked date is present)
-  measure: count_appointments_booked_all_time {
-    group_label: "Data – Measures / Bookings – Counts & Percents"
-    label: "Appointments Booked (All Time)"
+  measure: cancelled_past_weekend {
+    group_label: "Data – Measures"
     type: count_distinct
-    sql: ${id} ;;
-    filters: [appointment_booked_london_date: "-NULL"]
+    label: "Cancelled – Past Weekend"
     value_format_name: decimal_0
+    sql: CASE
+         WHEN ${appointments.status_display} IN ('Cancelled (MiM)', 'Cancelled (No Fee)', 'Cancelled (Fee Due)')
+          AND DATE(${appointments.updated_raw}) BETWEEN
+              DATE_SUB(CURRENT_DATE(), INTERVAL EXTRACT(DAYOFWEEK FROM CURRENT_DATE()) + 0 DAY)
+              AND DATE_SUB(CURRENT_DATE(), INTERVAL EXTRACT(DAYOFWEEK FROM CURRENT_DATE()) - 2 DAY)
+         THEN ${appointments.id}
+       END ;;
   }
 
-  measure: count_appointments_booked_this_year {
-    group_label: "Data – Measures / Bookings – Counts & Percents"
-    label: "Appointments Booked (This Year)"
+  measure: cancelled_past_weekend_no_fee {
+    group_label: "Data – Measures"
     type: count_distinct
-    sql: ${id} ;;
-    filters: [appointment_booked_london_date: "this year"]
+    label: "Cancelled – Past Weekend (No Fee)"
     value_format_name: decimal_0
+    sql: CASE
+         WHEN ${appointments.status_display} = 'Cancelled (No Fee)'
+          AND DATE(${appointments.updated_raw}) BETWEEN
+              DATE_SUB(CURRENT_DATE(), INTERVAL EXTRACT(DAYOFWEEK FROM CURRENT_DATE()) + 0 DAY)
+              AND DATE_SUB(CURRENT_DATE(), INTERVAL EXTRACT(DAYOFWEEK FROM CURRENT_DATE()) - 2 DAY)
+         THEN ${appointments.id}
+       END ;;
   }
 
-  measure: count_appointments_booked_last_year {
-    group_label: "Data – Measures / Bookings – Counts & Percents"
-    label: "Appointments Booked (Last Year)"
+  measure: cancelled_past_weekend_fee_due {
+    group_label: "Data – Measures"
     type: count_distinct
-    sql: ${id} ;;
-    filters: [appointment_booked_london_date: "last year"]
+    label: "Cancelled – Past Weekend (Fee Due)"
     value_format_name: decimal_0
+    sql: CASE
+         WHEN ${appointments.status_display} = 'Cancelled (Fee Due)'
+          AND DATE(${appointments.updated_raw}) BETWEEN
+              DATE_SUB(CURRENT_DATE(), INTERVAL EXTRACT(DAYOFWEEK FROM CURRENT_DATE()) + 0 DAY)
+              AND DATE_SUB(CURRENT_DATE(), INTERVAL EXTRACT(DAYOFWEEK FROM CURRENT_DATE()) - 2 DAY)
+         THEN ${appointments.id}
+       END ;;
   }
 
-  measure: count_appointments_booked_this_month {
-    group_label: "Data – Measures / Bookings – Counts & Percents"
-    label: "Appointments Booked (This Month)"
+  measure: cancelled_two_past_weekends {
+    group_label: "Data – Measures"
     type: count_distinct
-    sql: ${id} ;;
-    filters: [appointment_booked_london_date: "this month"]
+    label: "Cancelled – Two Past Weekends"
     value_format_name: decimal_0
+    sql: CASE
+         WHEN ${appointments.status_display} IN ('Cancelled (MiM)', 'Cancelled (No Fee)', 'Cancelled (Fee Due)')
+          AND DATE(${appointments.updated_raw}) BETWEEN
+              DATE_SUB(CURRENT_DATE(), INTERVAL (EXTRACT(DAYOFWEEK FROM CURRENT_DATE()) + 7) DAY)
+              AND DATE_SUB(CURRENT_DATE(), INTERVAL (EXTRACT(DAYOFWEEK FROM CURRENT_DATE()) + 5) DAY)
+         THEN ${appointments.id}
+       END ;;
   }
 
-  measure: count_appointments_booked_last_month {
-    group_label: "Data – Measures / Bookings – Counts & Percents"
-    label: "Appointments Booked (Last Month)"
+  measure: cancelled_two_past_weekends_fee_due {
+    group_label: "Data – Measures"
     type: count_distinct
-    sql: ${id} ;;
-    filters: [appointment_booked_london_date: "last month"]
+    label: "Cancelled – Two Past Weekends (Fee Due)"
     value_format_name: decimal_0
+    sql: CASE
+         WHEN ${appointments.status_display} = 'Cancelled (Fee Due)'
+          AND DATE(${appointments.updated_raw}) BETWEEN
+              DATE_SUB(CURRENT_DATE(), INTERVAL (EXTRACT(DAYOFWEEK FROM CURRENT_DATE()) + 7) DAY)
+              AND DATE_SUB(CURRENT_DATE(), INTERVAL (EXTRACT(DAYOFWEEK FROM CURRENT_DATE()) + 5) DAY)
+         THEN ${appointments.id}
+       END ;;
   }
 
-  measure: count_appointments_booked_2_months_ago {
-    group_label: "Data – Measures / Bookings – Counts & Percents"
-    label: "Appointments Booked (2 Months Ago)"
+  measure: cancelled_two_past_weekends_no_fee {
+    group_label: "Data – Measures"
     type: count_distinct
-    sql: ${id} ;;
-    filters: [appointment_booked_london_date: "2 months ago"]
+    label: "Cancelled – Two Past Weekends (No Fee)"
     value_format_name: decimal_0
+    sql: CASE
+         WHEN ${appointments.status_display} = 'Cancelled (No Fee)'
+          AND DATE(${appointments.updated_raw}) BETWEEN
+              DATE_SUB(CURRENT_DATE(), INTERVAL (EXTRACT(DAYOFWEEK FROM CURRENT_DATE()) + 7) DAY)
+              AND DATE_SUB(CURRENT_DATE(), INTERVAL (EXTRACT(DAYOFWEEK FROM CURRENT_DATE()) + 5) DAY)
+         THEN ${appointments.id}
+       END ;;
   }
 
-  measure: count_appointments_booked_3_months_ago {
-    group_label: "Data – Measures / Bookings – Counts & Percents"
-    label: "Appointments Booked (3 Months Ago)"
+  measure: cancelled_three_past_weekends_fee_due {
+    group_label: "Data – Measures"
     type: count_distinct
-    sql: ${id} ;;
-    filters: [appointment_booked_london_date: "3 months ago"]
+    label: "Cancelled – Three Past Weekends (Fee Due)"
     value_format_name: decimal_0
+    sql: CASE
+         WHEN ${appointments.status_display} = 'Cancelled (Fee Due)'
+          AND DATE(${appointments.updated_raw}) BETWEEN
+              DATE_SUB(CURRENT_DATE(), INTERVAL (EXTRACT(DAYOFWEEK FROM CURRENT_DATE()) + 14) DAY)
+              AND DATE_SUB(CURRENT_DATE(), INTERVAL (EXTRACT(DAYOFWEEK FROM CURRENT_DATE()) + 12) DAY)
+         THEN ${appointments.id}
+       END ;;
   }
 
-# Percents
-  measure: percent_appointments_month_vs_year {
-    group_label: "Data – Measures / Bookings – Counts & Percents"
-    label: "% Appointments Booked (This Month vs Year)"
-    type: number
-    value_format_name: percent_1
-    sql: SAFE_DIVIDE(
-         ${count_appointments_booked_this_month},
-         NULLIF(${count_appointments_booked_this_year}, 0)
-       ) ;;
+  measure: cancelled_three_past_weekends_no_fee {
+    group_label: "Data – Measures"
+    type: count_distinct
+    label: "Cancelled – Three Past Weekends (No Fee)"
+    value_format_name: decimal_0
+    sql: CASE
+         WHEN ${appointments.status_display} = 'Cancelled (No Fee)'
+          AND DATE(${appointments.updated_raw}) BETWEEN
+              DATE_SUB(CURRENT_DATE(), INTERVAL (EXTRACT(DAYOFWEEK FROM CURRENT_DATE()) + 14) DAY)
+              AND DATE_SUB(CURRENT_DATE(), INTERVAL (EXTRACT(DAYOFWEEK FROM CURRENT_DATE()) + 12) DAY)
+         THEN ${appointments.id}
+       END ;;
   }
 
-  measure: percent_appointments_month_vs_total {
-    group_label: "Data – Measures / Bookings – Counts & Percents"
-    label: "% Appointments Booked (This Month vs Total)"
-    type: number
-    value_format_name: percent_1
-    sql: SAFE_DIVIDE(
-         ${count_appointments_booked_this_month},
-         NULLIF(${count_appointments_booked_all_time}, 0)
-       ) ;;
+  measure: cancelled_four_past_weekends_fee_due {
+    group_label: "Data – Measures"
+    type: count_distinct
+    label: "Cancelled – Four Past Weekends (Fee Due)"
+    value_format_name: decimal_0
+    sql: CASE
+         WHEN ${appointments.status_display} = 'Cancelled (Fee Due)'
+          AND DATE(${appointments.updated_raw}) BETWEEN
+              DATE_SUB(CURRENT_DATE(), INTERVAL (EXTRACT(DAYOFWEEK FROM CURRENT_DATE()) + 21) DAY)
+              AND DATE_SUB(CURRENT_DATE(), INTERVAL (EXTRACT(DAYOFWEEK FROM CURRENT_DATE()) + 19) DAY)
+         THEN ${appointments.id}
+       END ;;
   }
 
-# 30 days vs this year
-  measure: percent_appointments_30_days_vs_year {
-    group_label: "Data – Measures / Bookings – Counts & Percents"
-    label: "% Appointments (Last 30 Days vs This Year)"
-    type: number
-    value_format_name: percent_1
-    sql: SAFE_DIVIDE(
-         COUNT(DISTINCT CASE
-           WHEN ${appointment_booked_london_date}
-                BETWEEN DATE_SUB(CURRENT_DATE("Europe/London"), INTERVAL 30 DAY)
-                AND     CURRENT_DATE("Europe/London")
-           THEN ${id} END),
-         NULLIF(
-           COUNT(DISTINCT CASE
-             WHEN EXTRACT(YEAR FROM ${appointment_booked_london_date})
-                     = EXTRACT(YEAR FROM CURRENT_DATE("Europe/London"))
-             THEN ${id} END),
-           0
-         )
-       ) ;;
+  measure: cancelled_four_past_weekends_no_fee {
+    group_label: "Data – Measures"
+    type: count_distinct
+    label: "Cancelled – Four Past Weekends (No Fee)"
+    value_format_name: decimal_0
+    sql: CASE
+         WHEN ${appointments.status_display} = 'Cancelled (No Fee)'
+          AND DATE(${appointments.updated_raw}) BETWEEN
+              DATE_SUB(CURRENT_DATE(), INTERVAL (EXTRACT(DAYOFWEEK FROM CURRENT_DATE()) + 21) DAY)
+              AND DATE_SUB(CURRENT_DATE(), INTERVAL (EXTRACT(DAYOFWEEK FROM CURRENT_DATE()) + 19) DAY)
+         THEN ${appointments.id}
+       END ;;
   }
